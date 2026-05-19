@@ -365,6 +365,7 @@ function setupListeners() {
     }
     if (!ok) return;
     localStorage.clear();
+    sessionStorage.clear(); // flags como show-archetype-after-reload
     location.reload();
   });
 }

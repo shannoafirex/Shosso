@@ -67,6 +67,11 @@ window.MemoryStore = {
     return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   },
 
+  // Recall persistence se batchea: el counter se actualiza en memoria
+  // siempre, pero el persist a localStorage se hace via debounce 2s.
+  // Sin esto, cada mensaje del chat con recall escribe localStorage.
+  _persistTimer: null,
+
   recall(query) {
     const q = this._normalize(query);
     const words = q.split(/[\s,.;:!?¡¿]+/).filter(w => w.length > 2);
@@ -83,8 +88,11 @@ window.MemoryStore = {
     });
     hits.forEach(h => h.recalls++);
     if (hits.length) {
-      this.persist();
+      // Debounce: si vienen muchos recalls en ráfaga, persistimos solo
+      // tras 2s de pausa. La UI sí se actualiza inmediatamente.
       this.render();
+      clearTimeout(this._persistTimer);
+      this._persistTimer = setTimeout(() => this.persist(), 2000);
     }
     return hits;
   },

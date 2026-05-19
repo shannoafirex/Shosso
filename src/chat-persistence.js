@@ -31,18 +31,27 @@ window.ChatPersistence = {
     const wrap = document.getElementById('chat-log');
     if (!wrap) return false;
     wrap.innerHTML = '';
+    let restored = 0, skipped = 0;
     for (const m of list) {
-      const div = document.createElement('div');
-      div.className = `msg msg-${m.role}`;
-      div.innerHTML = (m.meta ? `<div class="meta">${escapeHtml(m.meta)}</div>` : '') + m.html;
-      wrap.appendChild(div);
-      this._rehydrate(div, m);
+      try {
+        if (!m || !m.role || typeof m.html !== 'string') { skipped++; continue; }
+        const div = document.createElement('div');
+        div.className = `msg msg-${m.role}`;
+        div.innerHTML = (m.meta ? `<div class="meta">${escapeHtml(m.meta)}</div>` : '') + m.html;
+        wrap.appendChild(div);
+        this._rehydrate(div, m);
+        restored++;
+      } catch (e) {
+        console.warn('ChatPersistence.restore: skipping malformed message', e);
+        skipped++;
+      }
     }
     wrap.scrollTop = wrap.scrollHeight;
-    // Banner discreto
+    // Banner discreto. Si hubo skips, los reportamos.
     const banner = document.createElement('div');
     banner.className = 'msg msg-system';
-    banner.innerHTML = `📂 Sesión restaurada · <b>${list.length}</b> mensajes <button id="clear-history" class="ml-2 text-[10px] underline text-warn hover:text-danger">borrar historial</button>`;
+    const skipNote = skipped > 0 ? ` <span class="text-warn">· ${skipped} omitidos por corruptos</span>` : '';
+    banner.innerHTML = `📂 Sesión restaurada · <b>${restored}</b> mensajes${skipNote} <button id="clear-history" class="ml-2 text-[10px] underline text-warn hover:text-danger">borrar historial</button>`;
     wrap.insertBefore(banner, wrap.firstChild);
     document.getElementById('clear-history').onclick = () => {
       this.clear();
