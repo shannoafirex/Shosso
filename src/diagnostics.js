@@ -29,6 +29,8 @@ window.Diagnostics = {
     this.render();
     Context.log(`⚠ Fallo capturado en skill "${failure.skillId}": ${failure.symptom}`);
     if (window.Productivity) Productivity.refresh();
+    // Status bar chip ⚠ (diagnósticos abiertos)
+    if (window.Context) Context.refresh();
     return item;
   },
 
@@ -95,6 +97,8 @@ window.Diagnostics = {
       `Nuevo aprendizaje: <i>${escapeHtml(f.fix)}</i>.<br>` +
       `<span class="text-muted text-xs">Esto es el bucle recursivo del que habla el podcast.</span>`);
     Productivity.refresh();
+    // El body de la skill creció — refleja en breakdown si está loaded
+    if (window.Context) Context.refresh();
   },
 
   filter: 'all', // all | open | resolved | <skillId>

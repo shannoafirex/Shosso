@@ -19,6 +19,8 @@ window.AgentsStore = {
     this.render();
     if (window.Productivity) Productivity.refresh();
     if (window.Workshop) Workshop.render();
+    // Status bar chip ▼ (sub-agentes) se actualiza en Context.refresh
+    if (window.Context) Context.refresh();
   },
 
   remove(id) {
@@ -28,6 +30,7 @@ window.AgentsStore = {
     this.render();
     if (window.Productivity) Productivity.refresh();
     if (window.Workshop) Workshop.render();
+    if (window.Context) Context.refresh();
   },
 
   render() {

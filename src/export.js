@@ -88,7 +88,7 @@ window.WorkspaceExport = {
     lines.push('');
 
     // Planes agrupados por tag
-    const plans = JSON.parse(localStorage.getItem('shosso.plans') || '[]');
+    const plans = SafeStorage.safeGet('shosso.plans', []);
     if (plans.length > 0) {
       lines.push('## Planes recientes');
       const byTag = {};

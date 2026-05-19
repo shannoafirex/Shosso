@@ -33,7 +33,7 @@ window.Overview = {
     const skills = SkillsStore.skills;
     const loaded = skills.filter(s => s.loaded).length;
     const subs = AgentsStore.agents.filter(a => a.type === 'sub');
-    const plans = JSON.parse(localStorage.getItem('shosso.plans') || '[]');
+    const plans = SafeStorage.safeGet('shosso.plans', []);
     const openDiag = window.Diagnostics ? Diagnostics.failures.filter(f => !f.resolved).length : 0;
     const resolvedDiag = window.Diagnostics ? Diagnostics.failures.filter(f => f.resolved).length : 0;
 

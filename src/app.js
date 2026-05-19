@@ -88,13 +88,12 @@ function init() {
 }
 
 function loadFiles() {
-  const saved = localStorage.getItem('shosso.files');
-  openFiles = saved ? JSON.parse(saved) : structuredClone(window.SEED_FILES);
+  openFiles = SafeStorage.safeGet('shosso.files', structuredClone(window.SEED_FILES));
   persistFiles();
 }
 
 function persistFiles() {
-  localStorage.setItem('shosso.files', JSON.stringify(openFiles));
+  SafeStorage.safeSet('shosso.files', openFiles);
 }
 
 function renderFileTree() {
@@ -141,7 +140,7 @@ function setupTerminal() {
     out.appendChild(div);
     out.parentElement.scrollTop = out.parentElement.scrollHeight;
   };
-  const history = JSON.parse(localStorage.getItem('shosso.term.hist') || '[]');
+  const history = SafeStorage.safeGet('shosso.term.hist', []);
   let histIdx = history.length;
   inp.addEventListener('keydown', e => {
     if (e.key === 'ArrowUp') {
@@ -160,7 +159,7 @@ function setupTerminal() {
     print(`<span class="text-accent2">$</span> ${escapeHtml(cmd)}`);
     history.push(cmd);
     if (history.length > 100) history.shift();
-    localStorage.setItem('shosso.term.hist', JSON.stringify(history));
+    SafeStorage.safeSet('shosso.term.hist', history);
     histIdx = history.length;
     inp.value = '';
     const [bin, ...args] = cmd.split(/\s+/);

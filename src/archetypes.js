@@ -492,5 +492,7 @@ window.Archetypes = {
       `• ${report.skills} skills añadidas · ${report.agents} sub-agentes · ${report.memory} hechos de memoria · ${report.plans} plan${missingNote}${planHint}`);
     Context.log(`Archetype "${a.name}" aplicado.`);
     if (window.Productivity) Productivity.refresh();
+    // Skills metadata creció — refleja en context bar y status chips
+    if (window.Context) Context.refresh();
   }
 };

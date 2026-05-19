@@ -35,6 +35,8 @@ window.MemoryStore = {
     this.render();
     Context.log(`Memoria añadida: "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`);
     if (window.Productivity) Productivity.refresh();
+    // Status bar chip 🧠 (memorias) se actualiza en Context.refresh
+    if (window.Context) Context.refresh();
   },
 
   remove(id) {
@@ -42,6 +44,7 @@ window.MemoryStore = {
     this.persist();
     this.render();
     if (window.Productivity) Productivity.refresh();
+    if (window.Context) Context.refresh();
   },
 
   // Recupera ítems de memoria relevantes a un texto, simulando un retrieval.
