@@ -4,6 +4,21 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const invoke = (ch, ...a) => ipcRenderer.invoke(ch, ...a);
 
+// Wrap ipcRenderer.on so the renderer can unsubscribe. Returning the wrapped
+// listener is not enough across the contextBridge (functions are cloned), so
+// we hand back a disposer. Renderer code that re-runs (e.g. hot reload of a
+// component) can call the disposer to avoid duplicate handlers.
+function subscribe(channel, transform) {
+  return (cb) => {
+    if (typeof cb !== 'function') return () => {};
+    const listener = (_e, ...args) => {
+      try { cb(...transform(args)); } catch (err) { console.error(channel, err); }
+    };
+    ipcRenderer.on(channel, listener);
+    return () => { try { ipcRenderer.removeListener(channel, listener); } catch {} };
+  };
+}
+
 contextBridge.exposeInMainWorld('shosso', {
   platform: process.platform,
 
@@ -36,8 +51,8 @@ contextBridge.exposeInMainWorld('shosso', {
     write: (id, data) => invoke('pty:write', id, data),
     resize: (id, c, r) => invoke('pty:resize', id, c, r),
     kill: (id) => invoke('pty:kill', id),
-    onData: (cb) => ipcRenderer.on('pty:data', (_e, id, data) => cb(id, data)),
-    onExit: (cb) => ipcRenderer.on('pty:exit', (_e, id, code, signal) => cb(id, code, signal))
+    onData: subscribe('pty:data', ([id, data]) => [id, data]),
+    onExit: subscribe('pty:exit', ([id, code, signal]) => [id, code, signal])
   },
 
   shell: {
@@ -57,7 +72,7 @@ contextBridge.exposeInMainWorld('shosso', {
   llm: {
     run: (opts) => invoke('llm:run', opts),
     abort: (runId) => invoke('llm:abort', runId),
-    onEvent: (cb) => ipcRenderer.on('llm:event', (_e, runId, evt) => cb(runId, evt))
+    onEvent: subscribe('llm:event', ([runId, evt]) => [runId, evt])
   },
 
   app: {
@@ -70,7 +85,7 @@ contextBridge.exposeInMainWorld('shosso', {
   },
 
   on: {
-    openFolder: (cb) => ipcRenderer.on('shosso:open-folder', (_e, p) => cb(p)),
-    menu: (cb) => ipcRenderer.on('shosso:menu', (_e, action) => cb(action))
+    openFolder: subscribe('shosso:open-folder', ([p]) => [p]),
+    menu: subscribe('shosso:menu', ([action]) => [action])
   }
 });

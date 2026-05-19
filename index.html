@@ -61,8 +61,8 @@
           <div class="px-2 py-1.5 text-[10px] text-muted flex justify-between items-center">
             <span id="file-tree-root" class="truncate">sin carpeta</span>
             <div class="flex gap-2">
-              <button id="ft-new-file" class="hover:text-accent2" title="Nuevo archivo">＋</button>
-              <button id="ft-refresh" class="hover:text-accent2" title="Refrescar">↻</button>
+              <button id="ft-new-file" class="hover:text-accent2" title="Nuevo archivo" aria-label="Nuevo archivo">＋</button>
+              <button id="ft-refresh" class="hover:text-accent2" title="Refrescar" aria-label="Refrescar árbol de archivos">↻</button>
             </div>
           </div>
           <ul id="file-tree" class="text-sm"></ul>
@@ -84,15 +84,15 @@
           <p class="text-[10px] text-muted leading-snug">Skills = prompts reutilizables en <code>.shosso/skills/</code>. El agente las inyecta cuando le son útiles (progressive disclosure).</p>
           <div class="flex gap-1">
             <input id="skill-filter" placeholder="filtrar…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-[11px] outline-none focus:border-accent" />
-            <button id="skill-new" class="text-[11px] px-2 rounded bg-accent/20 text-accent hover:bg-accent/30">＋</button>
+            <button id="skill-new" aria-label="Nuevo skill" class="text-[11px] px-2 rounded bg-accent/20 text-accent hover:bg-accent/30">＋</button>
           </div>
           <ul id="skills-list" class="space-y-1"></ul>
           <div class="pt-2 border-t border-border">
             <p class="text-[10px] text-muted">Memoria persistente (hechos):</p>
             <ul id="memory-list" class="space-y-0.5 mt-1"></ul>
             <form id="memory-form" class="flex gap-1 mt-1">
-              <input id="memory-input" placeholder="hecho persistente…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-[11px] outline-none focus:border-accent" />
-              <button class="text-[11px] px-2 rounded bg-accent/20 text-accent">＋</button>
+              <input id="memory-input" aria-label="Nuevo hecho persistente" placeholder="hecho persistente…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-[11px] outline-none focus:border-accent" />
+              <button aria-label="Añadir hecho" class="text-[11px] px-2 rounded bg-accent/20 text-accent">＋</button>
             </form>
           </div>
         </div>
@@ -187,14 +187,14 @@
       <div class="p-4 space-y-4 text-sm">
         <div>
           <label class="block text-xs text-muted mb-1">Proveedor</label>
-          <select id="cfg-provider" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
+          <select id="cfg-provider" aria-label="Proveedor de LLM" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
             <option value="anthropic">Anthropic (Claude)</option>
             <option value="openai">OpenAI (GPT)</option>
           </select>
         </div>
         <div id="cfg-anthropic-block">
           <label class="block text-xs text-muted mb-1">Modelo Anthropic</label>
-          <select id="cfg-anthropic-model" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
+          <select id="cfg-anthropic-model" aria-label="Modelo Anthropic" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
             <option value="claude-opus-4-5">claude-opus-4-5</option>
             <option value="claude-sonnet-4-5" selected>claude-sonnet-4-5</option>
             <option value="claude-haiku-4-5">claude-haiku-4-5</option>
@@ -208,7 +208,7 @@
         </div>
         <div id="cfg-openai-block" class="hidden">
           <label class="block text-xs text-muted mb-1">Modelo OpenAI</label>
-          <select id="cfg-openai-model" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
+          <select id="cfg-openai-model" aria-label="Modelo OpenAI" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
             <option value="gpt-4o" selected>gpt-4o</option>
             <option value="gpt-4o-mini">gpt-4o-mini</option>
             <option value="gpt-4.1">gpt-4.1</option>
