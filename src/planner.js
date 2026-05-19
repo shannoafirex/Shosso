@@ -23,7 +23,7 @@ window.Planner = {
 
   open() {
     this.step = 0;
-    this.draft = { id: 'p' + Date.now(), goal: '', plan: '', prs: [] };
+    this.draft = { id: 'p' + Date.now(), goal: '', plan: '', prs: [], tag: 'engineering' };
     const modal = document.getElementById('planner-modal');
     modal.classList.remove('hidden');
     modal.onclick = (e) => { if (e.target === modal) this.close(); };
@@ -37,12 +37,25 @@ window.Planner = {
     document.getElementById('pl-step').textContent = `Paso ${this.step + 1} de 3`;
 
     if (this.step === 0) {
+      const tags = ['engineering', 'product', 'growth', 'support', 'ops'];
       body.innerHTML = `
         <h4 class="font-semibold">1. ¿Cuál es el estado final?</h4>
         <p class="text-muted text-xs">Como el <code>/goal</code> de Codex. Describe el END STATE, no la tarea. "App desplegada con login funcional", no "implementar login".</p>
         <textarea id="pl-goal" rows="3" placeholder="ej: usuarios pueden auspiciar mi canal pagando con Stripe, dashboard básico, emails de bienvenida"
           class="w-full bg-panel2 border border-border rounded px-2 py-1.5 text-sm">${escapeHtml(this.draft.goal)}</textarea>
+        <div>
+          <span class="text-xs text-muted">Área del plan:</span>
+          <div class="flex flex-wrap gap-1 mt-1">
+            ${tags.map(t => {
+              const active = this.draft.tag === t;
+              return `<button data-tag="${t}" class="pl-tag text-[10px] px-2 py-0.5 rounded ${active ? 'bg-accent text-white' : 'bg-panel2 text-muted hover:bg-border'}">${t}</button>`;
+            }).join('')}
+          </div>
+        </div>
       `;
+      body.querySelectorAll('button.pl-tag').forEach(b => {
+        b.onclick = () => { this.draft.tag = b.dataset.tag; this.renderStep(); };
+      });
     } else if (this.step === 1) {
       if (!this.draft.plan) this.draft.plan = this._draftPlan(this.draft.goal);
       body.innerHTML = `
@@ -166,6 +179,8 @@ window.Planner = {
     Context.log(`Plan guardado: "${this.draft.goal.slice(0, 60)}…" (${this.draft.prs.length} PRs)`);
   },
 
+  recentFilter: 'all',
+
   renderRecent() {
     const wrap = document.getElementById('plans-list');
     if (!wrap) return;
@@ -174,11 +189,24 @@ window.Planner = {
       wrap.innerHTML = '<div class="text-xs text-muted">Sin planes aún. El plan es para ti — accountability, no para el agente.</div>';
       return;
     }
-    wrap.innerHTML = saved.map(p => {
+    // Chips de filtro por tag
+    const tagsPresent = new Set(saved.map(p => p.tag).filter(Boolean));
+    const filterChips = tagsPresent.size > 1
+      ? `<div class="flex flex-wrap gap-1 mb-2">
+          <button data-tag="all" class="pl-filter text-[10px] px-2 py-0.5 rounded ${this.recentFilter === 'all' ? 'bg-accent text-white' : 'bg-panel2 text-muted hover:bg-border'}">all</button>
+          ${[...tagsPresent].sort().map(t => `
+            <button data-tag="${escapeHtml(t)}" class="pl-filter text-[10px] px-2 py-0.5 rounded ${this.recentFilter === t ? 'bg-accent text-white' : 'bg-panel2 text-muted hover:bg-border'}">${escapeHtml(t)}</button>
+          `).join('')}
+        </div>`
+      : '';
+    let list = saved;
+    if (this.recentFilter !== 'all') list = list.filter(p => p.tag === this.recentFilter);
+    wrap.innerHTML = filterChips + list.map(p => {
       const sent = p.prs.filter(x => x.status === 'sent').length;
       const total = p.prs.length;
       const pct = total ? Math.round((sent / total) * 100) : 0;
       const barColor = pct === 100 ? 'bg-success' : pct >= 50 ? 'bg-accent' : 'bg-warn';
+      const tagBadge = p.tag ? `<span class="text-[9px] uppercase tracking-wide bg-bg px-1.5 py-0.5 rounded text-muted">${escapeHtml(p.tag)}</span>` : '';
       return `
       <div class="bg-panel2 border border-border rounded p-2 text-xs">
         <div class="flex justify-between items-start gap-2">
@@ -188,8 +216,15 @@ window.Planner = {
         <div class="h-1.5 bg-bg rounded overflow-hidden mt-1.5">
           <div class="h-full ${barColor}" style="width:${pct}%"></div>
         </div>
-        <div class="text-muted text-[10px] mt-1">${new Date(p.savedAt).toLocaleDateString()}</div>
+        <div class="flex justify-between items-center mt-1">
+          <div class="text-muted text-[10px]">${new Date(p.savedAt).toLocaleDateString()}</div>
+          ${tagBadge}
+        </div>
       </div>
     `;}).join('');
+    // Wire filter chips
+    wrap.querySelectorAll('button.pl-filter').forEach(b => {
+      b.onclick = () => { this.recentFilter = b.dataset.tag; this.renderRecent(); };
+    });
   }
 };

@@ -52,6 +52,7 @@ function init() {
   KnowledgeWork.init();
   Workshop.init();
   Metrics.init();
+  WorkspaceExport.init();
   I18N.init();
   Overview.init();
   Tutorial.init();
@@ -260,12 +261,39 @@ function setupListeners() {
   });
 
   document.getElementById('btn-new-agent').addEventListener('click', () => {
-    const name = prompt('Nombre del sub-agente (ej: research, ops):');
+    const name = prompt('Nombre del sub-agente (ej: marketing, ops, support):');
     if (!name) return;
     const role = prompt('¿Qué hace? (1 línea)') || '';
+    // Sugerencia de skills por matching nombre → tag.
+    // Marketing → tag growth; support → tag support; etc.
+    const tagMap = {
+      marketing: 'growth', growth: 'growth', sales: 'growth',
+      support: 'support', success: 'support',
+      product: 'product', design: 'product',
+      eng: 'engineering', engineering: 'engineering', dev: 'engineering',
+      ops: 'engineering', devops: 'engineering'
+    };
+    const lower = name.toLowerCase();
+    const matchedTag = Object.keys(tagMap).find(k => lower.includes(k));
+    let suggested = [];
+    if (matchedTag) {
+      const tag = tagMap[matchedTag];
+      suggested = SkillsStore.skills
+        .filter(s => (s.tags || []).includes(tag))
+        .map(s => s.id);
+    }
+    if (suggested.length > 0) {
+      const ok = confirm(
+        `Detecté que "${name}" es de tipo ${matchedTag}.\n\n` +
+        `¿Asignar automáticamente estas skills?\n` +
+        suggested.map(s => '  · ' + s).join('\n') +
+        `\n\nPodrás cambiarlas luego desde el editor (✎).`
+      );
+      if (!ok) suggested = [];
+    }
     AgentsStore.add({
       id: 'sub-' + Date.now(),
-      name, role, type: 'sub', skills: [],
+      name, role, type: 'sub', skills: suggested,
       productivityScore: 0
     });
     Productivity.refresh();
