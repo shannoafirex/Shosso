@@ -9,34 +9,44 @@
 
 window.OpenSource = {
   CATALOG: {
-    'browser-use': {
-      files: ['index.ts', 'src/agent.ts', 'src/browser.ts', 'README.md']
-    },
-    'composio': {
-      files: ['index.ts', 'src/auth.ts', 'src/tools.ts', 'README.md']
-    },
-    'daytona': {
-      files: ['sdk.ts', 'src/sandbox.ts', 'src/exec.ts', 'README.md']
-    },
-    'open-claw': {
-      files: ['index.ts', 'src/loop.ts', 'src/hooks.ts', 'README.md']
-    },
-    'svelte': {
-      files: ['index.ts', 'src/runtime/index.ts', 'src/compiler/index.ts', 'README.md']
-    },
-    'convex': {
-      files: ['index.ts', 'src/server.ts', 'src/react.ts', 'schema.ts', 'README.md']
-    },
-    'effect': {
-      files: ['index.ts', 'src/Effect.ts', 'src/Layer.ts', 'README.md']
-    }
+    // Agentes / infra
+    'browser-use': { files: ['index.ts', 'src/agent.ts', 'src/browser.ts', 'README.md'] },
+    'composio':    { files: ['index.ts', 'src/auth.ts', 'src/tools.ts', 'README.md'] },
+    'daytona':     { files: ['sdk.ts', 'src/sandbox.ts', 'src/exec.ts', 'README.md'] },
+    'open-claw':   { files: ['index.ts', 'src/loop.ts', 'src/hooks.ts', 'README.md'] },
+    'langchain':   { files: ['index.ts', 'src/chains/index.ts', 'src/agents/index.ts', 'README.md'] },
+    'mcp':         { files: ['index.ts', 'src/server.ts', 'src/client.ts', 'README.md'] },
+    // Frameworks frontend
+    'svelte':      { files: ['index.ts', 'src/runtime/index.ts', 'src/compiler/index.ts', 'README.md'] },
+    'react':       { files: ['index.js', 'src/React.js', 'src/ReactHooks.js', 'README.md'] },
+    'vite':        { files: ['index.ts', 'src/config.ts', 'src/dev-server.ts', 'README.md'] },
+    'lit':         { files: ['index.ts', 'src/lit-element.ts', 'README.md'] },
+    'tailwindcss': { files: ['index.js', 'src/util/dataTypes.js', 'README.md'] },
+    // Backend / data
+    'convex':      { files: ['index.ts', 'src/server.ts', 'src/react.ts', 'schema.ts', 'README.md'] },
+    'drizzle-orm': { files: ['index.ts', 'src/pg-core/index.ts', 'src/mysql-core/index.ts', 'README.md'] },
+    'effect':      { files: ['index.ts', 'src/Effect.ts', 'src/Layer.ts', 'README.md'] },
+    'hono':        { files: ['index.ts', 'src/router.ts', 'src/context.ts', 'README.md'] },
+    'elysia':      { files: ['index.ts', 'src/elysia.ts', 'README.md'] },
+    // Runtimes
+    'bun':         { files: ['index.ts', 'src/runtime.ts', 'README.md'] },
+    'deno':        { files: ['mod.ts', 'src/runtime.ts', 'README.md'] },
+    // SDKs IA
+    'anthropic-sdk': { files: ['index.ts', 'src/client.ts', 'src/resources/messages.ts', 'README.md'] },
+    'openai-sdk':    { files: ['index.ts', 'src/client.ts', 'src/resources/chat.ts', 'README.md'] },
+    // Servicios
+    'supabase':    { files: ['index.ts', 'src/SupabaseClient.ts', 'README.md'] },
+    'stripe':      { files: ['index.ts', 'src/stripe.ts', 'README.md'] },
+    'posthog':     { files: ['index.ts', 'src/posthog-core.ts', 'README.md'] },
+    'sentry':      { files: ['index.ts', 'src/sdk.ts', 'README.md'] }
   },
 
   fetch(repo) {
     const slug = repo.replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '').toLowerCase();
     const key = Object.keys(this.CATALOG).find(k => slug.includes(k));
     if (!key) {
-      return { ok: false, msg: `No tengo un mock de "${repo}". El comando real sí lo fetchea; aquí solo simulo: browser-use, composio, daytona, open-claw, svelte, convex, effect.` };
+      const list = Object.keys(this.CATALOG).sort().join(', ');
+      return { ok: false, msg: `No tengo un mock de "${repo}". El comando real sí lo fetchea; aquí simulo: ${list}.` };
     }
     const spec = this.CATALOG[key];
     const base = `repos/github.com/${key}`;

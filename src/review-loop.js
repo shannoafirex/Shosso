@@ -8,11 +8,15 @@
 
 window.ReviewLoop = {
   running: false,
+  queue: [],
 
-  // Disparado por /grebloop en el chat.
+  // Disparado por /grebloop. Si hay uno corriendo, encola en vez de bloquear.
   async run(prDescription) {
     if (this.running) {
-      MockAgent.log('system', '/grebloop ya está en ejecución.');
+      this.queue.push(prDescription);
+      MockAgent.log('system',
+        `⏳ /grebloop encolado · posición <b>${this.queue.length}</b>.<br>` +
+        `<span class="text-muted text-xs">Se ejecutará automáticamente cuando termine el actual.</span>`);
       return;
     }
     this.running = true;
@@ -46,6 +50,13 @@ window.ReviewLoop = {
         `⏸ Loop pausado en ${score}/5 tras ${iter} vueltas. PR demasiado grande (${prSize} líneas). Divídelo con el Plan.`);
     }
     this.running = false;
+
+    // Procesa la cola
+    if (this.queue.length > 0) {
+      const next = this.queue.shift();
+      MockAgent.log('system', `▶ desencolando /grebloop (${this.queue.length} pendientes después)`);
+      setTimeout(() => this.run(next), 300);
+    }
   },
 
   _estimateSize(desc) {

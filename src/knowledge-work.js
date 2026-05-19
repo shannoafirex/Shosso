@@ -15,6 +15,12 @@ window.KnowledgeWork = {
       icon: '📄',
       desc: 'Detecta abusos y propone rebuttals',
       cost: '$200/mes', alt: '$3.000-5.000 (abogado)',
+      steps: [
+        { delay: 600, label: 'extrayendo cláusulas del PDF…' },
+        { delay: 900, label: 'comparando contra market standard (p10/p50/p90)…' },
+        { delay: 800, label: 'detectando asimetrías en favor de la contraparte…' },
+        { delay: 700, label: 'redactando rebuttals con tono profesional…' }
+      ],
       run: () => `<b>Análisis del contrato (27 páginas):</b><br>
         • Cláusula 4.2: indemnización ilimitada → <b>rechazar o cap a 1x fees</b>.<br>
         • Cláusula 7.1: IP perpetua → renegociar a licencia limitada.<br>
@@ -29,6 +35,13 @@ window.KnowledgeWork = {
       icon: '🧾',
       desc: '3.000 transacciones en 2h',
       cost: '$200/mes', alt: '$5.000-6.000 (firma)',
+      steps: [
+        { delay: 700, label: 'descargando 3.012 transacciones de Stripe/PayPal/Wise…' },
+        { delay: 1000, label: 'normalizando categorías y monedas…' },
+        { delay: 900, label: 'detectando duplicados y reembolsos…' },
+        { delay: 800, label: 'cruzando contra extractos bancarios…' },
+        { delay: 700, label: 'aplicando reglas fiscales locales…' }
+      ],
       run: () => `<b>Audit accounting 2024:</b><br>
         • 3.012 transacciones procesadas (Stripe + PayPal + Wise).<br>
         • 14 categorizaciones erróneas corregidas.<br>
@@ -43,6 +56,11 @@ window.KnowledgeWork = {
       icon: '📊',
       desc: 'KPIs cruzados, formato 1 página',
       cost: '$0 (incluido)', alt: '$1.500 (consultor)',
+      steps: [
+        { delay: 500, label: 'pulling Notion + Stripe + GA + Substack…' },
+        { delay: 600, label: 'normalizando semanas y calculando deltas…' },
+        { delay: 500, label: 'identificando outliers y narrativas…' }
+      ],
       run: () => `<b>Reporte ejecutivo Q:</b><br>
         • Revenue: +18% QoQ (+8% YoY).<br>
         • Burn: -22% vs Q anterior, runway 14 meses.<br>
@@ -57,6 +75,12 @@ window.KnowledgeWork = {
       icon: '⚖',
       desc: 'Jurisprudencia local + risk score',
       cost: '$200/mes', alt: '$2.500 (consulta)',
+      steps: [
+        { delay: 700, label: 'consultando marco normativo (GDPR, AEPD)…' },
+        { delay: 900, label: 'buscando sentencias relevantes 2022-2024…' },
+        { delay: 800, label: 'evaluando risk score caso-específico…' },
+        { delay: 600, label: 'redactando recomendaciones accionables…' }
+      ],
       run: () => `<b>Investigación: GDPR + biometric data (UE):</b><br>
         • Marco: Art. 9 GDPR (datos categoría especial), AEPD guía 2023.<br>
         • Sentencias relevantes: 3 casos UE 2022-2024.<br>
@@ -88,13 +112,32 @@ window.KnowledgeWork = {
     });
   },
 
-  run(id) {
+  async run(id) {
     const a = this.ACTIONS.find(x => x.id === id);
     if (!a) return;
     document.querySelector('[data-tab="chat"]')?.click();
     MockAgent.log('user', `Ejecuta knowledge work: ${a.name}`, 'tú');
+
+    // Progress por pasos — refleja que la acción NO es instantánea en
+    // la vida real (contract review = horas, accounting = horas).
+    const steps = a.steps || [];
+    const progressMsg = MockAgent.log('tool',
+      `<b>${a.icon} ${escapeHtml(a.name)}</b> · <span class="kw-step-label">iniciando…</span><br>` +
+      `<div class="kw-progress mt-1"><div class="kw-progress-bar" style="width:0%"></div></div>`);
+    const labelEl = progressMsg.querySelector('.kw-step-label');
+    const barEl = progressMsg.querySelector('.kw-progress-bar');
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      labelEl.textContent = step.label;
+      barEl.style.width = `${((i + 1) / steps.length) * 100}%`;
+      await new Promise(r => setTimeout(r, step.delay));
+    }
+    if (labelEl) labelEl.textContent = '✓ análisis completado';
+    if (barEl) barEl.style.background = '#22c55e';
+
     setTimeout(() => {
       MockAgent.log('agent', a.run(), `agente · knowledge work · ${a.id}`);
-    }, 500);
+    }, 200);
   }
 };
