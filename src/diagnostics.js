@@ -46,8 +46,31 @@ window.Diagnostics = {
   applyFix(failureId) {
     const f = this.failures.find(x => x.id === failureId);
     if (!f || !f.fix) return;
+
+    // Incidents: no hay skill que actualizar. Marcamos resuelto y registramos
+    // el fix como nota en la memoria (para que el agente lo recuerde).
+    if (f.skillId === '__incident__') {
+      f.resolved = true;
+      f.resolvedAt = Date.now();
+      this.persist();
+      this.render();
+      MemoryStore.add(`Incident resuelto (${f.date.slice(0,10)}): ${f.symptom} → fix aplicado: ${f.fix}`);
+      Context.log(`✓ Incident resuelto y guardado en memoria.`);
+      MockAgent.log('system',
+        `🚨 Incident marcado como resuelto. El fix se guardó en memoria persistente para futura referencia.`);
+      Productivity.refresh();
+      return;
+    }
+
     const s = SkillsStore.get(f.skillId);
-    if (!s) return;
+    if (!s) {
+      // Skill borrada después de capturar el fallo. Solo marcamos resuelto.
+      f.resolved = true;
+      this.persist();
+      this.render();
+      MockAgent.log('system', `Fallo marcado como resuelto. La skill ya no existe — sólo registro histórico.`);
+      return;
+    }
 
     const date = f.date.slice(0, 10);
     const learning = `- Iter ${(s.iterations || 0) + 1} (${date}): ${f.fix}`;
@@ -85,7 +108,10 @@ window.Diagnostics = {
     else if (this.filter !== 'all') list = list.filter(f => f.skillId === this.filter);
 
     const skillOpts = [...new Set(this.failures.map(f => f.skillId))]
-      .map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join('');
+      .map(id => {
+        const label = id === '__incident__' ? '🚨 incidents' : id;
+        return `<option value="${escapeHtml(id)}">${escapeHtml(label)}</option>`;
+      }).join('');
     const header = `
       <div class="flex items-center gap-2 mb-2">
         <select id="diag-filter" class="bg-panel2 border border-border rounded text-xs px-2 py-1 outline-none">

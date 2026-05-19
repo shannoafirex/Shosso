@@ -70,13 +70,21 @@ window.WorkspaceExport = {
     }
     lines.push('');
 
-    // Planes (top 5)
+    // Planes agrupados por tag
     const plans = JSON.parse(localStorage.getItem('shosso.plans') || '[]');
     if (plans.length > 0) {
       lines.push('## Planes recientes');
-      for (const p of plans.slice(0, 5)) {
-        const sent = p.prs.filter(x => x.status === 'sent').length;
-        lines.push(`- **${p.goal}** — ${sent}/${p.prs.length} PRs enviados`);
+      const byTag = {};
+      for (const p of plans.slice(0, 10)) {
+        const tag = p.tag || '(sin área)';
+        (byTag[tag] = byTag[tag] || []).push(p);
+      }
+      for (const tag of Object.keys(byTag).sort()) {
+        lines.push(`\n### ${tag}`);
+        for (const p of byTag[tag]) {
+          const sent = p.prs.filter(x => x.status === 'sent').length;
+          lines.push(`- **${p.goal}** — ${sent}/${p.prs.length} PRs enviados`);
+        }
       }
       lines.push('');
     }

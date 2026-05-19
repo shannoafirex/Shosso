@@ -263,6 +263,18 @@ function setupListeners() {
   document.getElementById('btn-new-agent').addEventListener('click', () => {
     const name = prompt('Nombre del sub-agente (ej: marketing, ops, support):');
     if (!name) return;
+    // Aviso si ya existe uno con ese nombre exacto (case-insensitive).
+    const collision = AgentsStore.agents.find(
+      a => a.name.toLowerCase() === name.toLowerCase()
+    );
+    if (collision) {
+      const ok = confirm(
+        `Ya existe un agente "${collision.name}" (${collision.type}).\n\n` +
+        `Si creas otro, conviven como agentes separados con IDs distintos.\n\n` +
+        `¿Continuar igual?`
+      );
+      if (!ok) return;
+    }
     const role = prompt('¿Qué hace? (1 línea)') || '';
     // Sugerencia de skills por matching nombre → tag.
     // Marketing → tag growth; support → tag support; etc.

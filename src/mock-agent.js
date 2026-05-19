@@ -360,6 +360,8 @@ window.MockAgent = {
       this.log('system',
         `📊 <b>${escapeHtml(name)}</b> = ${Metrics._formatVal(value)}${unit ? ' ' + escapeHtml(unit) : ''}${deltaStr}<br>` +
         `<span class="text-muted text-xs">Visible en Overview (click productivity score).</span>`);
+      // Refresca Overview si está abierto
+      if (window.Overview) Overview.refresh();
       return true;
     }
     if (cmd === 'incident') {
