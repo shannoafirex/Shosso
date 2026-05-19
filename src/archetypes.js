@@ -392,16 +392,18 @@ window.Archetypes = {
   // Aplica el archetype additive: añade skills/agentes/memoria/plan
   // que no existen ya. No clobera.
   apply(a) {
-    let report = { skills: 0, agents: 0, memory: 0, plans: 0 };
+    let report = { skills: 0, agents: 0, memory: 0, plans: 0, missing: [] };
 
-    // Skills: las del archetype ya están como seed, sólo verifica que existen.
+    // Skills: las del archetype suelen estar como seed. Si no, intentamos
+    // recuperar del SEED. Si tampoco está, anotamos como missing.
     for (const sid of a.skills) {
       if (!SkillsStore.get(sid)) {
-        // Si por algún motivo no está, la creamos vacía con la descripción del seed
         const seed = (window.SEED_SKILLS || []).find(s => s.id === sid);
         if (seed) {
           SkillsStore.skills.push(structuredClone(seed));
           report.skills++;
+        } else {
+          report.missing.push(sid);
         }
       }
     }
@@ -452,9 +454,12 @@ window.Archetypes = {
     report.plans = 1;
 
     // Sumario en chat
+    const missingNote = report.missing.length > 0
+      ? `<br><span class="text-warn text-xs">⚠ ${report.missing.length} skill(s) referenciadas no encontradas en seed ni en workspace: ${report.missing.slice(0, 4).map(escapeHtml).join(', ')}${report.missing.length > 4 ? '…' : ''}. Crea esas skills manualmente si las necesitas.</span>`
+      : '';
     MockAgent.log('system',
       `✦ <b>Archetype aplicado: ${escapeHtml(a.name)}</b><br>` +
-      `• ${report.skills} skills añadidas · ${report.agents} sub-agentes · ${report.memory} hechos de memoria · ${report.plans} plan<br>` +
+      `• ${report.skills} skills añadidas · ${report.agents} sub-agentes · ${report.memory} hechos de memoria · ${report.plans} plan${missingNote}<br>` +
       `<span class="text-muted text-xs">Empieza por el plan: panel <b>Plan</b> → ${escapeHtml(a.plan.goal.slice(0, 60))}…</span>`);
     Context.log(`Archetype "${a.name}" aplicado.`);
     if (window.Productivity) Productivity.refresh();

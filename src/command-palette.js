@@ -229,8 +229,9 @@ window.CommandPalette = {
       { title: 'Overview', subtitle: 'Stats + ROI calculator', icon: '📊', action: () => Overview.open() },
       { title: 'Health check', subtitle: 'Audit accionable del workspace', icon: '🩺', action: () => Health.open() },
       { title: 'Cambiar proyecto', subtitle: 'Switch project', icon: '📁', action: () => Projects.openMenu() },
-      { title: 'Nueva skill', subtitle: 'Constructor recursivo', icon: '+', action: () => SkillBuilder.open() },
-      { title: 'Nuevo plan', subtitle: 'Goal → small PRs', icon: '+', action: () => Planner.open() },
+      { title: 'Nueva skill', subtitle: 'Constructor recursivo (4 pasos)', icon: '⚡', action: () => SkillBuilder.open() },
+      { title: 'Nuevo plan', subtitle: 'Goal → small PRs', icon: '📋', action: () => Planner.open() },
+      { title: 'Nuevo proyecto', subtitle: 'Vacío o con seed', icon: '📁', action: () => Projects._createWithTemplate() },
       { title: 'Atajos de teclado', subtitle: 'Lista completa', icon: '⌨', action: () => Shortcuts.showHelp() }
     ];
     for (const a of actions) items.push({ category: 'Acción', ...a });
