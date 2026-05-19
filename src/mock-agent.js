@@ -343,6 +343,7 @@ window.MockAgent = {
         `<code>/opensource &lt;repo&gt;</code> — clona código de un paquete<br>` +
         `<code>/newthread</code> o <code>/compact</code> — empieza thread limpio<br>` +
         `<code>/dispatch &lt;tarea&gt;</code> — manda en paralelo a todos los sub-agentes<br>` +
+        `<code>/archetype</code> — picker "qué estás construyendo" (pre-popula workspace)<br>` +
         `<code>/metric &lt;nombre&gt; &lt;valor&gt; [unidad]</code> — tracker SaaS (MRR, churn, NPS…)<br>` +
         `<code>/incident &lt;descripción&gt;</code> — registra incidente de producción/cliente<br>` +
         `<code>/demo</code> — corre un escenario scripted (mira sin teclear)<br>` +
@@ -422,6 +423,10 @@ window.MockAgent = {
         return true;
       }
       Dispatcher.dispatch(args);
+      return true;
+    }
+    if (cmd === 'archetype') {
+      Archetypes.openPicker();
       return true;
     }
     if (cmd === 'demo') {

@@ -53,6 +53,7 @@ function init() {
   Workshop.init();
   Metrics.init();
   WorkspaceExport.init();
+  Archetypes.init();
   I18N.init();
   Overview.init();
   Tutorial.init();
