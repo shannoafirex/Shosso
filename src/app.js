@@ -32,6 +32,9 @@ require(['vs/editor/editor.main'], function () {
 });
 
 function init() {
+  // Proyectos debe inicializarse PRIMERO: setea current-project antes de
+  // que las stores empiecen a leer/escribir
+  if (window.Projects) Projects.init();
   loadFiles();
   SkillsStore.init();
   AgentsStore.init();

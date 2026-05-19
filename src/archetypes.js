@@ -191,12 +191,17 @@ window.Archetypes = {
 
   init() {
     document.getElementById('btn-archetype').addEventListener('click', () => this.openPicker());
-    // Auto-show la primera vez si el tour ya se cerró y no hay nada aplicado
+    // Auto-show: si Projects acaba de crear uno nuevo y pidió picker tras reload
+    if (sessionStorage.getItem('shosso.show-archetype-after-reload')) {
+      sessionStorage.removeItem('shosso.show-archetype-after-reload');
+      setTimeout(() => this.openPicker(), 600);
+      return;
+    }
+    // O la primera vez tras tour
     setTimeout(() => {
       const seen = SafeStorage.safeGet('shosso.archetype-seen', false);
       const tourSeen = localStorage.getItem('shosso.tutorial-seen');
       if (!seen && tourSeen) {
-        // Sólo si el chat es solo el greeting (no engagement aún)
         const msgs = SafeStorage.safeGet('shosso.chat.history', []);
         if (msgs.length <= 2) this.openPicker();
       }
