@@ -155,8 +155,11 @@ window.Planner = {
 
   _savePlan() {
     const saved = JSON.parse(localStorage.getItem('shosso.plans') || '[]');
-    saved.unshift({ ...this.draft, savedAt: Date.now() });
-    localStorage.setItem('shosso.plans', JSON.stringify(saved.slice(0, 10)));
+    // Si el plan ya estaba guardado (mismo id), actualízalo en su sitio
+    const existing = saved.findIndex(p => p.id === this.draft.id);
+    if (existing >= 0) saved[existing] = { ...this.draft, savedAt: Date.now() };
+    else saved.unshift({ ...this.draft, savedAt: Date.now() });
+    localStorage.setItem('shosso.plans', JSON.stringify(saved.slice(0, 50)));
     this.renderRecent();
     Context.log(`Plan guardado: "${this.draft.goal.slice(0, 60)}…" (${this.draft.prs.length} PRs)`);
   },

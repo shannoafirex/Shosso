@@ -52,6 +52,7 @@ function init() {
   KnowledgeWork.init();
   Workshop.init();
   I18N.init();
+  Overview.init();
   Tutorial.init();
   ImportSkill.init();
   setupTerminal();
