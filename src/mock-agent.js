@@ -23,6 +23,14 @@ window.MockAgent = {
   sleep(ms) { return new Promise(r => setTimeout(r, ms)); },
 
   async send(userText) {
+    try { return await this._sendImpl(userText); }
+    catch (err) {
+      console.error('MockAgent.send error:', err);
+      this.log('system', `⚠ Error procesando turno: ${escapeHtml(err.message || String(err))}`);
+    }
+  },
+
+  async _sendImpl(userText) {
     if (!userText.trim()) return;
     // Asegura que el chat es visible — si el usuario invoca un comando
     // desde shortcut o palette estando en otro tab, vería el output

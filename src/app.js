@@ -82,9 +82,32 @@ function init() {
   setupTabs();
   setupListeners();
   setupElectronBridge();
+  setupGlobalEscape();
   // Restaurar historial; sólo saludamos si está vacío
   const restored = ChatPersistence.restore();
   if (!restored) greet();
+}
+
+// Escape cierra el modal visible más reciente (topmost en DOM order).
+// Funciona para fixed modals (skill-builder, planner, tutorial) y ad-hoc
+// modales creados dinámicamente.
+function setupGlobalEscape() {
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    // Si CommandPalette está abierto, ya tiene su propio handler.
+    if (window.CommandPalette?._modal) return;
+    // Encontrar todos los modales visibles z-50
+    const all = [...document.body.querySelectorAll('.z-50')];
+    const visible = all.filter(m => !m.classList.contains('hidden') && m.offsetParent !== null);
+    if (visible.length === 0) return;
+    const top = visible[visible.length - 1];
+    e.preventDefault();
+    e.stopPropagation();
+    // Intenta data-close primero, fallback a botones conocidos
+    const closeBtn = top.querySelector('[data-close]')
+      || top.querySelector('#sb-close, #pl-close, #tutorial-close');
+    if (closeBtn) closeBtn.click();
+  });
 }
 
 function loadFiles() {

@@ -350,9 +350,19 @@ window.CommandPalette = {
     const item = this._results[i];
     if (!item) return;
     this.close();
-    try { item.action(); } catch (err) {
+    try {
+      const result = item.action();
+      // Acciones async (ej. MockAgent.send) devuelven Promise — captura
+      // errores que de otro modo serían unhandled rejections.
+      if (result && typeof result.catch === 'function') {
+        result.catch(err => {
+          console.warn('Palette async action error:', err);
+          MockAgent.log('system', `Error ejecutando "${escapeHtml(item.title)}": ${escapeHtml(err.message || String(err))}`);
+        });
+      }
+    } catch (err) {
       console.warn('Palette action error:', err);
-      MockAgent.log('system', `Error ejecutando "${item.title}": ${err.message}`);
+      MockAgent.log('system', `Error ejecutando "${escapeHtml(item.title)}": ${escapeHtml(err.message || String(err))}`);
     }
   }
 };
