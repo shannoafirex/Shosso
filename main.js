@@ -435,6 +435,7 @@ async function runAnthropic(opts, event, signal) {
   let assistantBlocks = [];
   let usage = null;
 
+  try {
   for await (const chunk of stream) {
     if (chunk.type === 'content_block_start') {
       const block = chunk.content_block;
@@ -455,6 +456,23 @@ async function runAnthropic(opts, event, signal) {
       if (chunk.usage) usage = chunk.usage;
     }
   }
+  } catch (err) {
+    if (err.name === 'AbortError' || /abort/i.test(err.message || '')) {
+      for (const b of assistantBlocks) {
+        if (b && b.type === 'tool_use' && b._partialJson) {
+          try { b.input = JSON.parse(b._partialJson); } catch {}
+          delete b._partialJson;
+        }
+      }
+      return {
+        provider: 'anthropic',
+        stopReason: 'aborted',
+        content: assistantBlocks.filter(Boolean),
+        usage
+      };
+    }
+    throw err;
+  }
   const final = await stream.finalMessage();
   for (const b of assistantBlocks) {
     if (b && b.type === 'tool_use' && b._partialJson) {
@@ -462,7 +480,6 @@ async function runAnthropic(opts, event, signal) {
       delete b._partialJson;
     }
   }
-  // Prefer SDK's parsed content
   const content = final.content || assistantBlocks;
   return {
     provider: 'anthropic',
@@ -566,3 +583,15 @@ app.whenReady().then(() => { buildMenu(); createWindow();
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
+
+// Kill child pty processes if main is terminated abruptly (Ctrl+C in dev,
+// SIGTERM from OS), otherwise they become orphan shells on Linux/macOS.
+function cleanupPtys() {
+  for (const p of ptyStore.values()) {
+    try { p.kill(); } catch {}
+  }
+  ptyStore.clear();
+}
+process.on('exit', cleanupPtys);
+process.on('SIGINT', () => { cleanupPtys(); process.exit(0); });
+process.on('SIGTERM', () => { cleanupPtys(); process.exit(0); });

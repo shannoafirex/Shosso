@@ -32,13 +32,21 @@ window.Agent = {
 
     // Register the LLM event listener exactly once. It dispatches by runId
     // to whichever turn is currently active.
+    // Render is throttled: _renderMarkdown is O(N) per call, deltas can fire
+    // hundreds of times per response → O(N²) without batching.
+    let renderTimer = null;
+    const flushRender = () => {
+      renderTimer = null;
+      if (!this._streamingEl) return;
+      this._streamingEl.innerHTML = `<div class="text-[10px] text-muted">${this._streamMeta}</div>${this._renderMarkdown(this._streamText)}`;
+      const log = document.getElementById('chat-log');
+      log.scrollTop = log.scrollHeight;
+    };
     window.shosso.llm.onEvent((runId, evt) => {
       if (runId !== this.currentRunId) return;
       if (evt.type === 'text_delta' && this._streamingEl) {
         this._streamText += evt.text;
-        this._streamingEl.innerHTML = `<div class="text-[10px] text-muted">${this._streamMeta}</div>${this._renderMarkdown(this._streamText)}`;
-        const log = document.getElementById('chat-log');
-        log.scrollTop = log.scrollHeight;
+        if (!renderTimer) renderTimer = setTimeout(flushRender, 50);
       }
       if (evt.type === 'block_start' && evt.block?.type === 'tool_use') {
         this.appendLog(`tool_call: ${evt.block.name}`);
@@ -53,6 +61,9 @@ window.Agent = {
     div.className = `chat-msg chat-${role}`;
     div.innerHTML = (meta ? `<div class="text-[10px] text-muted">${escapeHtml(meta)}</div>` : '') + html;
     log.appendChild(div);
+    // Cap DOM growth: keep the last 200 messages. Older history is gone
+    // visually but still lives in Context.conversation if relevant.
+    while (log.children.length > 200) log.removeChild(log.firstChild);
     log.scrollTop = log.scrollHeight;
     return div;
   },

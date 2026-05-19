@@ -71,10 +71,21 @@ window.Editor = {
     if (!entry) {
       const r = await window.shosso.fs.readFile(filePath);
       if (r.error) { alert('Error abriendo: ' + r.error); return; }
-      const model = monaco.editor.createModel(r.content, this.detectLang(filePath),
-        monaco.Uri.file(filePath));
-      entry = { path: filePath, model, dirty: false, mtime: r.mtime };
-      this.open.push(entry);
+      // Reuse existing Monaco model if a previous load already created one
+      // for this URI. Two rapid clicks would otherwise collide with
+      // "Cannot create two models with the same URI".
+      const uri = monaco.Uri.file(filePath);
+      let model = monaco.editor.getModel(uri);
+      if (!model) model = monaco.editor.createModel(r.content, this.detectLang(filePath), uri);
+      else if (model.getValue() !== r.content) model.setValue(r.content);
+      // Late-arriving second openPath may find that the first one already
+      // pushed an entry — bail out instead of duplicating.
+      const dup = this.open.find(o => o.path === filePath);
+      if (dup) { entry = dup; }
+      else {
+        entry = { path: filePath, model, dirty: false, mtime: r.mtime };
+        this.open.push(entry);
+      }
     }
     this.active = entry;
     this.monaco.setModel(entry.model);
@@ -94,13 +105,25 @@ window.Editor = {
   },
 
   async save() {
-    if (!this.active) return;
+    if (!this.active) {
+      const status = document.getElementById('status-left');
+      if (status) {
+        status.textContent = '⚠ Sin fichero activo';
+        setTimeout(() => Context && Context.refresh && Context.refresh(), 1500);
+      }
+      return;
+    }
     const f = this.active;
     const r = await window.shosso.fs.writeFile(f.path, f.model.getValue());
     if (r.error) { alert('Error guardando: ' + r.error); return; }
     f.dirty = false;
     f.mtime = r.mtime;
     this._renderTabs();
+    const status = document.getElementById('status-left');
+    if (status) {
+      status.textContent = '✓ guardado';
+      setTimeout(() => Context && Context.refresh && Context.refresh(), 1500);
+    }
     document.dispatchEvent(new CustomEvent('shosso:fileSaved', { detail: f.path }));
   },
 

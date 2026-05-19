@@ -132,8 +132,31 @@ window.Tools = (() => {
     }
   ];
 
+  // Minimal required-args validation. Without it a malformed LLM call
+  // can write "undefined" to disk or read a directory as a file.
+  const REQUIRED = {
+    read_file: ['path'],
+    write_file: ['path', 'content'],
+    edit_file: ['path', 'old_string', 'new_string'],
+    list_dir: [],
+    glob: [],
+    grep: ['pattern'],
+    bash: ['command'],
+    git: ['sub'],
+    remember: ['fact'],
+    recall: ['query']
+  };
+
   async function execute(name, args) {
     args = args || {};
+    const need = REQUIRED[name];
+    if (need) {
+      for (const k of need) {
+        if (args[k] === undefined || args[k] === null) {
+          return { error: `tool ${name}: argumento requerido "${k}" no provisto` };
+        }
+      }
+    }
     switch (name) {
       case 'read_file': {
         const root = ensureRoot();

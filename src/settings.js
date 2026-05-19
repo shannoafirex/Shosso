@@ -33,10 +33,18 @@ window.Settings = {
       this._save({ anthropicModel: e.target.value }));
     document.getElementById('cfg-openai-model').addEventListener('change', e =>
       this._save({ openaiModel: e.target.value }));
-    document.getElementById('cfg-max-tokens').addEventListener('change', e =>
-      this._save({ maxTokens: parseInt(e.target.value, 10) || 4096 }));
-    document.getElementById('cfg-auto-compact').addEventListener('change', e =>
-      this._save({ autoCompactPct: (parseInt(e.target.value, 10) || 80) / 100 }));
+    document.getElementById('cfg-max-tokens').addEventListener('change', e => {
+      const n = parseInt(e.target.value, 10);
+      const clamped = Math.max(256, Math.min(32000, isFinite(n) ? n : 4096));
+      e.target.value = clamped;
+      this._save({ maxTokens: clamped });
+    });
+    document.getElementById('cfg-auto-compact').addEventListener('change', e => {
+      const n = parseInt(e.target.value, 10);
+      const clamped = Math.max(50, Math.min(95, isFinite(n) ? n : 80));
+      e.target.value = clamped;
+      this._save({ autoCompactPct: clamped / 100 });
+    });
 
     document.getElementById('cfg-anthropic-save').onclick = () => this._saveKey('anthropic');
     document.getElementById('cfg-openai-save').onclick = () => this._saveKey('openai');
