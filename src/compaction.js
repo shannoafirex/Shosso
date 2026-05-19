@@ -9,11 +9,7 @@ window.Compaction = {
   history: [],
 
   init() {
-    // Restaurar history de sesiones previas (sólo metadata, no contenido)
-    try {
-      const saved = JSON.parse(localStorage.getItem('shosso.compactions') || '[]');
-      this.history = saved.slice(0, 20);
-    } catch { this.history = []; }
+    this.history = SafeStorage.safeGet('shosso.compactions', []).slice(0, 20);
     const cb = document.getElementById('cfg-auto-compact');
     if (cb) {
       cb.addEventListener('change', e => { this.auto = e.target.checked; });
@@ -21,9 +17,7 @@ window.Compaction = {
   },
 
   _persistHistory() {
-    try {
-      localStorage.setItem('shosso.compactions', JSON.stringify(this.history.slice(0, 20)));
-    } catch {}
+    SafeStorage.safeSet('shosso.compactions', this.history.slice(0, 20));
   },
 
   // Llamado por Context tras cada cambio.

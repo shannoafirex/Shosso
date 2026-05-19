@@ -8,12 +8,11 @@ window.Diagnostics = {
   failures: [],
 
   init() {
-    const saved = localStorage.getItem('shosso.failures');
-    this.failures = saved ? JSON.parse(saved) : [];
+    this.failures = SafeStorage.safeGet('shosso.failures', []);
     this.render();
   },
 
-  persist() { localStorage.setItem('shosso.failures', JSON.stringify(this.failures)); },
+  persist() { SafeStorage.safeSet('shosso.failures', this.failures); },
 
   capture(failure) {
     const item = {

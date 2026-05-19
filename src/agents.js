@@ -5,13 +5,12 @@ window.AgentsStore = {
   agents: [],
 
   init() {
-    const saved = localStorage.getItem('shosso.agents');
-    this.agents = saved ? JSON.parse(saved) : structuredClone(window.SEED_AGENTS);
+    this.agents = SafeStorage.safeGet('shosso.agents', structuredClone(window.SEED_AGENTS));
     this.persist();
   },
 
   persist() {
-    localStorage.setItem('shosso.agents', JSON.stringify(this.agents));
+    SafeStorage.safeSet('shosso.agents', this.agents);
   },
 
   add(agent) {

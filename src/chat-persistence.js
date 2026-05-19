@@ -14,12 +14,11 @@ window.ChatPersistence = {
     const list = this._read();
     list.push({ role, html, meta, ts: Date.now() });
     if (list.length > this.CAP) list.splice(0, list.length - this.CAP);
-    localStorage.setItem(this.KEY, JSON.stringify(list));
+    SafeStorage.safeSet(this.KEY, list);
   },
 
   _read() {
-    try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); }
-    catch { return []; }
+    return SafeStorage.safeGet(this.KEY, []);
   },
 
   clear() {

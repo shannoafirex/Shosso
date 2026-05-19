@@ -7,11 +7,10 @@ window.Metrics = {
   KEY: 'shosso.metrics',
 
   init() {
-    try { this.data = JSON.parse(localStorage.getItem(this.KEY) || '{}'); }
-    catch { this.data = {}; }
+    this.data = SafeStorage.safeGet(this.KEY, {});
   },
 
-  persist() { localStorage.setItem(this.KEY, JSON.stringify(this.data)); },
+  persist() { SafeStorage.safeSet(this.KEY, this.data); },
 
   // /metric <name> <value> [unit]
   set(name, value, unit = '') {

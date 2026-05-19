@@ -133,7 +133,10 @@ window.MockAgent = {
       { id: 'churn-investigation', keys: ['churn', 'cancelacion', 'cancellation', 'retencion', 'cohorte'] },
       { id: 'pricing-experiment',  keys: ['pricing', 'precio', 'tier', 'a/b', 'experimento'] },
       { id: 'user-interview-synth',keys: ['entrevista', 'interview', 'sintet', 'patron de usuario', 'usuarios dicen'] },
-      { id: 'support-triage',      keys: ['ticket', 'soporte', 'support', 'queja', 'complaint', 'triage'] }
+      { id: 'support-triage',      keys: ['ticket', 'soporte', 'support', 'queja', 'complaint', 'triage'] },
+      { id: 'script-outline',      keys: ['outline', 'guion', 'script', 'estructura del video', 'video largo'] },
+      { id: 'thumbnail-iterate',   keys: ['thumbnail', 'miniatura', 'portada del video'] },
+      { id: 'hook-rewrite',        keys: ['hook', 'opening', 'apertura del video', 'primeros 15'] }
     ];
     for (const r of rules) {
       if (r.keys.some(k => t.includes(this._normalize(k)))) {
@@ -153,6 +156,9 @@ window.MockAgent = {
     if (skill.id === 'pricing-experiment') return this._pricingExperiment();
     if (skill.id === 'user-interview-synth') return this._userInterviewSynth();
     if (skill.id === 'support-triage') return this._supportTriage();
+    if (skill.id === 'script-outline') return this._scriptOutline();
+    if (skill.id === 'thumbnail-iterate') return this._thumbnailIterate();
+    if (skill.id === 'hook-rewrite') return this._hookRewrite();
     return `Skill ${skill.name} ejecutada.`;
   },
 
@@ -203,6 +209,37 @@ window.MockAgent = {
       <i>"Espero 3 segundos cada vez que filtro, eso me saca del flow."</i><br>
       <i>"Pago Pro pero no sé qué me da que Free no."</i><br>
       <br><b>Próximos pasos:</b> A/B test mensaje pricing + sprint perf dashboard.`;
+  },
+
+  _scriptOutline() {
+    return `Outline para "Cómo monté SponsorSync en 3 semanas" (target 14 min):<br>
+      • <b>00:00-00:15 Hook</b>: "Vendí $4.200 en sponsorships en 21 días sin abogado. Aquí cómo."<br>
+      • <b>00:15-01:30 Stakes</b>: la fricción específica que tu audiencia conoce (chasing emails, sin sistema).<br>
+      • <b>01:30-04:00</b> Idea inicial + estructura del producto (incluye demo).<br>
+      • <b>04:00-07:00</b> Build con AI (capturas de cursor).<br>
+      • <b>07:00-09:30</b> Primer cliente — narrativa real con pricing en pantalla.<br>
+      • <b>09:30-11:00 Pico retention</b>: error + recuperación.<br>
+      • <b>11:00-12:30</b> Métricas y CTA suave.<br>
+      • <b>12:30-14:00</b> Lecciones + "qué construir tú".`;
+  },
+
+  _thumbnailIterate() {
+    return `Variantes para video "Vendí $4.2k en 21 días":<br>
+      • <b>V1 Emocional</b>: tu cara mirando el laptop sorprendida + número grande "$4.2K".<br>
+        Hipótesis: gana en mobile, alta emoción visible.<br>
+      • <b>V2 Texto fuerte</b>: "21 días" + flecha hacia "$4.200" en fondo color marca.<br>
+        Hipótesis: gana en desktop, lectura rápida.<br>
+      • <b>V3 Visual</b>: laptop con stripe dashboard de pagos reales + tu logo.<br>
+        Hipótesis: gana con audiencia técnica, baja sensación clickbait.<br>
+      <br>Plan A/B: 48h, decisión por CTR + AVD combinado. NO por CTR solo.`;
+  },
+
+  _hookRewrite() {
+    return `Hook original detectado como genérico ("hoy os enseño cómo monté…"). 3 versiones:<br>
+      • <b>V1 Promesa específica</b>: "Vendí $4.200 en 21 días sin ningún abogado ni ayuda. Te muestro exactamente cómo, en orden."<br>
+      • <b>V2 Reverse-reveal</b>: <i>(screenshot del Stripe dashboard)</i> "Este dashboard valió $4.200 este mes. Y lo monté yo desde cero en 3 semanas."<br>
+      • <b>V3 Tension</b>: "Tres semanas atrás no sabía qué era un webhook. Hoy mi sistema procesa pagos automáticamente. Aquí está el atajo."<br>
+      <br>Recomiendo V2: visual hook bate texto en YouTube. V1 si tu nicho odia clickbait.`;
   },
 
   _supportTriage() {

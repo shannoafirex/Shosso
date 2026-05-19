@@ -5,13 +5,12 @@ window.SkillsStore = {
   skills: [],
 
   init() {
-    const saved = localStorage.getItem('shosso.skills');
-    this.skills = saved ? JSON.parse(saved) : structuredClone(window.SEED_SKILLS);
+    this.skills = SafeStorage.safeGet('shosso.skills', structuredClone(window.SEED_SKILLS));
     this.persist();
   },
 
   persist() {
-    localStorage.setItem('shosso.skills', JSON.stringify(this.skills));
+    SafeStorage.safeSet('shosso.skills', this.skills);
   },
 
   add(skill) {

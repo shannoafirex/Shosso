@@ -308,6 +308,78 @@ Pasos:
     tags: ['product', 'saas']
   },
   {
+    id: 'script-outline',
+    name: 'script-outline',
+    description: 'Genera outline de video largo (10-30 min) con hook fuerte, structure de retention, y CTA. Úsalo antes de escribir el script.',
+    body: `# script-outline
+
+Entrada: tema + duración objetivo.
+
+Pasos:
+1. <b>Hook</b> (0-15s): pregunta o promesa específica. NO "hoy vamos a hablar de…".
+2. Curiosity gap o "stake": qué pierde el viewer si no termina.
+3. Estructura por bloques de 90s con mini-cliffhangers.
+4. Picos de retention cada 3-5 min (cambio de tono, B-roll, demo en vivo).
+5. CTA al minuto 70-80% del video (no al final).
+
+## Reglas duras
+- Si el hook no diferencia tu video del 90% del nicho, reescríbelo.
+- Nunca prometas algo que no entregues antes del minuto 50%.
+- Outline tiene que caber en 1 pantalla.
+
+Output: outline timestampeado + bullets de B-roll.`,
+    loaded: false, iterations: 4, failures: [],
+    tags: ['creator']
+  },
+  {
+    id: 'thumbnail-iterate',
+    name: 'thumbnail-iterate',
+    description: 'Genera 3-5 variantes de thumbnail con hipótesis claras. Plan de A/B con TubeBuddy o similar.',
+    body: `# thumbnail-iterate
+
+Para cada video:
+1. Base: lo que el algoritmo espera para tu nicho (review/tutorial/vlog).
+2. 3 variantes:
+   - <b>Emocional</b>: cara con expresión clara (sorpresa, foco).
+   - <b>Texto + nombre</b>: 2-4 palabras grandes, alto contraste.
+   - <b>Visual + objeto</b>: el producto/sujeto, sin cara.
+3. Cada variante con hipótesis explícita: "esta gana si el viewer prioriza X".
+4. Plan A/B: 24-48h, segmenta por device (mobile vs desktop).
+5. Decision: CTR + average view duration combinado, no solo CTR.
+
+## Reglas duras
+- Nunca un thumbnail con > 4 palabras visibles.
+- Coherencia visual: el thumbnail tiene que vivir en tu grid del canal.
+- Si CTR sube pero AVD baja, era clickbait — descarta.
+
+Output: 3 archivos + matriz de hipótesis/decisión.`,
+    loaded: false, iterations: 3, failures: [],
+    tags: ['creator']
+  },
+  {
+    id: 'hook-rewrite',
+    name: 'hook-rewrite',
+    description: 'Reescribe el opening de un video para mejorar retention día 1-3 (cuando YouTube decide si te empuja).',
+    body: `# hook-rewrite
+
+Entrada: opening actual + métricas (AVD, retention día 7).
+
+Reglas:
+1. Primeros 15 segundos: NO presentación. Promesa específica + tensión.
+2. Si dices el título, dilo distinto. Si lo metiste como hook, ya perdió.
+3. Mostrar el resultado/punchline antes del proceso ("aquí está el final, ahora cómo llegamos").
+4. Sentence-level: corta. Verbos al frente.
+
+## Reglas duras
+- Si la frase 1 podría abrir CUALQUIER video del nicho, reescribe.
+- Nunca "antes de empezar, suscríbete". Eso desbloquea exit.
+- Si retention <40% al minuto 1, el problema NO es el hook — es el tema.
+
+Output: 3 versiones del hook con explicación de qué cambia en cada una.`,
+    loaded: false, iterations: 3, failures: [],
+    tags: ['creator']
+  },
+  {
     id: 'support-triage',
     name: 'support-triage',
     description: 'Clasifica tickets de soporte y propone respuesta + escalación. Detecta tickets que son bugs ocultos vs duda real.',

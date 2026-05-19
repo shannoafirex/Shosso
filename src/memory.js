@@ -10,8 +10,7 @@ window.MemoryStore = {
   items: [],
 
   init() {
-    const saved = localStorage.getItem('shosso.memory');
-    this.items = saved ? JSON.parse(saved) : structuredClone(window.SEED_MEMORY);
+    this.items = SafeStorage.safeGet('shosso.memory', structuredClone(window.SEED_MEMORY));
     this.persist();
     document.getElementById('memory-form').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -23,7 +22,7 @@ window.MemoryStore = {
     });
   },
 
-  persist() { localStorage.setItem('shosso.memory', JSON.stringify(this.items)); },
+  persist() { SafeStorage.safeSet('shosso.memory', this.items); },
 
   add(text) {
     this.items.unshift({

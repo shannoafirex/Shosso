@@ -139,6 +139,46 @@ window.KnowledgeWork = {
         <b>Acción</b>: prioridad sprint perf dashboard antes de D30 de cohorte Nov.`
     },
     {
+      id: 'cross-post-adapt',
+      name: 'Adapt cross-platform',
+      icon: '📡',
+      desc: 'Un contenido → 5 plataformas con tono nativo',
+      cost: '$200/mes', alt: '4h/semana + community manager $1.500',
+      steps: [
+        { delay: 500, label: 'extrayendo idea central del contenido…' },
+        { delay: 700, label: 'adaptando a tono Twitter (thread)…' },
+        { delay: 600, label: 'adaptando a LinkedIn (carrousel)…' },
+        { delay: 600, label: 'adaptando a IG (caption + alt text)…' },
+        { delay: 500, label: 'sintetizando newsletter teaser…' }
+      ],
+      run: () => `<b>Adaptaciones del video "Vendí $4.2k en 21 días":</b><br>
+        • <b>Twitter (thread 7 tweets)</b>: tweet 1 = hook con número, t2-6 = pasos, t7 = CTA al video.<br>
+        • <b>LinkedIn (carrousel)</b>: slide 1 = stat, slides 2-7 = lecciones, slide 8 = CTA.<br>
+        • <b>IG caption</b>: 4 párrafos, primer línea hook independiente, hashtags al final.<br>
+        • <b>Newsletter teaser</b>: párrafo gancho + 3 takeaways + link al video.<br>
+        <span class="text-success">Tono ajustado por plataforma. Listo para schedule.</span>`
+    },
+    {
+      id: 'comment-triage',
+      name: 'Triage de comentarios',
+      icon: '💬',
+      desc: 'Clasifica 200 comentarios en señal vs ruido',
+      cost: '$200/mes', alt: '2h/video moderating',
+      steps: [
+        { delay: 600, label: 'pulling 247 comentarios del último video…' },
+        { delay: 700, label: 'detectando spam + auto-promo (37 marcados)…' },
+        { delay: 800, label: 'identificando preguntas legítimas (52)…' },
+        { delay: 700, label: 'detectando feedback accionable (8 patrones)…' }
+      ],
+      run: () => `<b>Triage de 247 comentarios:</b><br>
+        • <b>Spam / auto-promo</b>: 37 (hide masivo recomendado).<br>
+        • <b>Preguntas legítimas</b>: 52 — top 5 con plantilla de respuesta sugerida.<br>
+        • <b>Bug reports</b>: 3 (pasar a Diagnostics como /incident).<br>
+        • <b>Feature requests</b>: 12 — agrupados en 2 patrones (export, bulk-actions).<br>
+        • <b>Feedback emocional (positivo)</b>: 143 — destacar 2-3 testimoniales para landing.<br>
+        <span class="text-success">Tiempo: 2 min. Vs 2h moderando manualmente.</span>`
+    },
+    {
       id: 'legal-research',
       name: 'Investigación legal',
       icon: '⚖',

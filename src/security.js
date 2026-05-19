@@ -14,13 +14,13 @@ window.Security = {
   },
 
   init() {
-    const saved = localStorage.getItem('shosso.security');
-    if (saved) this.state = { ...this.state, ...JSON.parse(saved) };
+    const saved = SafeStorage.safeGet('shosso.security', null);
+    if (saved) this.state = { ...this.state, ...saved };
     this.render();
     this._bind();
   },
 
-  persist() { localStorage.setItem('shosso.security', JSON.stringify(this.state)); },
+  persist() { SafeStorage.safeSet('shosso.security', this.state); },
 
   _bind() {
     document.getElementById('sec-pp').addEventListener('input', e => {
