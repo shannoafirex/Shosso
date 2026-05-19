@@ -131,16 +131,25 @@ window.Productivity = {
   },
 
   _enrich(r) {
-    const skillsInvoked = SkillsStore.skills.filter(s => s.loaded || (s.iterations || 0) > 0).length;
-    const memoryRecalled = MemoryStore.items.reduce((sum, m) => sum + (m.recalls || 0), 0);
-    const memoryCount = MemoryStore.items.length;
+    // Defensive: si alguno de los stores no está inicializado aún (orden
+    // raro de init, o test setup), devuelve enrichment con ceros en vez
+    // de crashear.
+    const skills = window.SkillsStore?.skills || [];
+    const items = window.MemoryStore?.items || [];
+    const skillsInvoked = skills.filter(s => s.loaded || (s.iterations || 0) > 0).length;
+    const memoryRecalled = items.reduce((sum, m) => sum + (m.recalls || 0), 0);
+    const memoryCount = items.length;
     const sevenDaysAgo = Date.now() - 7 * 86400000;
     const staleOpenDiag = (window.Diagnostics?.failures || [])
-      .filter(f => !f.resolved && new Date(f.date).getTime() < sevenDaysAgo).length;
+      .filter(f => {
+        if (f.resolved) return false;
+        const t = new Date(f.date).getTime();
+        return !isNaN(t) && t < sevenDaysAgo;
+      }).length;
     const agentMdTokens = window.SystemPromptView?.agentMd
       ? estimateTokens(SystemPromptView.agentMd) : 0;
     const compactionsThisSession = (window.Compaction?.history || [])
-      .filter(c => Date.now() - c.ts < 6 * 3600 * 1000).length;
+      .filter(c => c && typeof c.ts === 'number' && (Date.now() - c.ts) < 6 * 3600 * 1000).length;
     return { ...r, skillsInvoked, memoryRecalled, memoryCount, staleOpenDiag, agentMdTokens, compactionsThisSession };
   }
 };
