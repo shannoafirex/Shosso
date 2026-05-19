@@ -68,18 +68,25 @@ window.Planner = {
 
   _renderPRs() {
     const ul = document.getElementById('pl-prs');
-    ul.innerHTML = this.draft.prs.map((p, i) => `
+    ul.innerHTML = this.draft.prs.map((p, i) => {
+      const lines = this._estimateLines(p);
+      let badge, hint;
+      if (lines < 300) { badge = 'bg-success/15 text-success'; hint = 'tamaño ideal'; }
+      else if (lines < 500) { badge = 'bg-warn/15 text-warn'; hint = 'al límite'; }
+      else { badge = 'bg-danger/15 text-danger'; hint = '⚠ el review loop se romperá — divide'; }
+      return `
       <li class="bg-panel2 border border-border rounded p-2 space-y-1">
-        <div class="flex justify-between items-center">
+        <div class="flex justify-between items-center gap-2">
           <input data-i="${i}" data-k="title" value="${escapeHtml(p.title)}"
             class="flex-1 bg-transparent text-sm font-semibold outline-none" />
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded ${badge}" title="${escapeHtml(hint)}">~${lines}L</span>
           <button data-i="${i}" data-action="remove" class="text-muted hover:text-danger text-xs">✕</button>
         </div>
         <textarea data-i="${i}" data-k="body" rows="2" placeholder="qué cambia, archivos tocados, tests"
           class="w-full bg-bg border border-border rounded px-2 py-1 text-xs outline-none">${escapeHtml(p.body)}</textarea>
         <button data-i="${i}" data-action="send" class="text-[10px] px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30">→ Enviar PR ${i+1} al agente</button>
       </li>
-    `).join('');
+    `;}).join('');
     ul.querySelectorAll('input,textarea').forEach(el => {
       el.addEventListener('input', e => {
         const i = +e.target.dataset.i, k = e.target.dataset.k;
@@ -97,6 +104,11 @@ window.Planner = {
         MockAgent.send(`Implementa este PR pequeño:\n\n**${p.title}**\n${p.body}`);
       };
     });
+  },
+
+  _estimateLines(p) {
+    // Estimación naïve: tokens del body * 2.2 ≈ líneas implementadas.
+    return Math.max(40, Math.round(estimateTokens(p.title + ' ' + p.body) * 6));
   },
 
   _draftPlan(goal) {

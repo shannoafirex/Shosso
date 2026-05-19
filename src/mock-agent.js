@@ -82,8 +82,12 @@ window.MockAgent = {
       Context.log(`Agente cargó skill "${skill.name}" automáticamente (+${estimateTokens(skill.body)}t).`);
     }
 
-    // Decide si simulamos un fallo (skills jóvenes fallan más)
-    const shouldFail = (skill.iterations || 0) < 2 && Math.random() < 0.6;
+    // Decide si simulamos un fallo. Skills jóvenes (60%), maduras (8%).
+    // Las maduras también pueden fallar — así el usuario ve el flow de
+    // diagnóstico aunque empiece con las seed skills.
+    const iter = skill.iterations || 0;
+    const failRate = iter < 2 ? 0.6 : (iter < 5 ? 0.15 : 0.08);
+    const shouldFail = Math.random() < failRate;
 
     await this.sleep(450);
 
@@ -222,6 +226,19 @@ window.MockAgent = {
     const cmd = m[1].toLowerCase();
     const args = m[2] || '';
 
+    if (cmd === 'help' || cmd === '?') {
+      this.log('system',
+        `<b>Comandos disponibles:</b><br>` +
+        `<code>/goal &lt;end state&gt;</code> — define el estado final (estilo Codex)<br>` +
+        `<code>/plan</code> — abre el Planner (goal → small PRs)<br>` +
+        `<code>/grebloop [PR]</code> — auto-review hasta 5/5<br>` +
+        `<code>/opensource &lt;repo&gt;</code> — clona código de un paquete<br>` +
+        `<code>/newthread</code> o <code>/compact</code> — empieza thread limpio<br>` +
+        `<code>/dispatch &lt;tarea&gt;</code> — manda en paralelo a todos los sub-agentes<br>` +
+        `<code>/help</code> — esta lista<br><br>` +
+        `<b>Easter eggs:</b> "rundown", "food at home", "am I cooked", "1.8 billion", "vibe vs agentic", "knowledge work", "permanent underclass", "2 semanas".`);
+      return true;
+    }
     if (cmd === 'grebloop') {
       ReviewLoop.run(args || 'PR actual');
       return true;

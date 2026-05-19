@@ -125,11 +125,27 @@ function setupTerminal() {
     out.appendChild(div);
     out.parentElement.scrollTop = out.parentElement.scrollHeight;
   };
+  const history = JSON.parse(localStorage.getItem('shosso.term.hist') || '[]');
+  let histIdx = history.length;
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'ArrowUp') {
+      if (histIdx > 0) { histIdx--; inp.value = history[histIdx] || ''; }
+      e.preventDefault();
+    } else if (e.key === 'ArrowDown') {
+      if (histIdx < history.length - 1) { histIdx++; inp.value = history[histIdx] || ''; }
+      else { histIdx = history.length; inp.value = ''; }
+      e.preventDefault();
+    }
+  });
   form.addEventListener('submit', e => {
     e.preventDefault();
     const cmd = inp.value.trim();
     if (!cmd) return;
     print(`<span class="text-accent2">$</span> ${escapeHtml(cmd)}`);
+    history.push(cmd);
+    if (history.length > 100) history.shift();
+    localStorage.setItem('shosso.term.hist', JSON.stringify(history));
+    histIdx = history.length;
     inp.value = '';
     const [bin, ...args] = cmd.split(/\s+/);
     if (bin === 'help') {

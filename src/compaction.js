@@ -22,7 +22,16 @@ window.Compaction = {
     if (!badge) return;
     if (pct > 0.7) {
       badge.classList.remove('hidden');
-      badge.textContent = pct >= this.threshold ? '⚠ compactando…' : '⚠ compactación cerca';
+      if (pct >= 0.9) {
+        badge.textContent = '⚠⚠ degradado · click = thread nuevo';
+        badge.className = 'ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-danger/20 text-danger animate-pulse cursor-pointer';
+      } else if (pct >= this.threshold) {
+        badge.textContent = this.auto ? '⚠ compactando…' : '⚠ click = thread nuevo';
+        badge.className = 'ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-warn/20 text-warn animate-pulse cursor-pointer';
+      } else {
+        badge.textContent = `⚠ ${Math.round(pct*100)}% · cerca del umbral`;
+        badge.className = 'ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-warn/15 text-warn cursor-pointer';
+      }
     } else {
       badge.classList.add('hidden');
     }

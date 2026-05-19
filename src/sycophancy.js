@@ -39,8 +39,19 @@ window.Sycophancy = {
         <button class="sy-challenge text-[10px] px-2 py-1 rounded bg-warn text-bg hover:opacity-80 whitespace-nowrap">Desafiar</button>
       </div>
     `;
-    warn.querySelector('.sy-challenge').onclick = () => {
-      MockAgent.send('Antes de cambiar de opinión, dame las fuentes y razones por las que ahora dices lo contrario. No me des la razón si no estás convencido.');
+    warn.querySelector('.sy-challenge').onclick = async () => {
+      // En vez de mandar a la pipeline normal (que respondería genérico),
+      // simulamos directamente la defensa para que el usuario vea el patrón
+      // correcto: agente que mantiene su posición con razones.
+      MockAgent.log('user', 'Antes de cambiar de opinión, dame las fuentes y razones. No me des la razón si no estás convencido.', 'tú');
+      await MockAgent.sleep(380);
+      MockAgent.log('agent',
+        `Justo. Reviso mi reasoning:<br>` +
+        `1. Tu pregunta no aportó datos nuevos — fue una presión retórica.<br>` +
+        `2. Mi output original se basaba en X, Y y Z (puedo enseñarlos).<br>` +
+        `3. Sin nueva evidencia, mantengo mi conclusión.<br>` +
+        `<span class="text-success text-xs">Esto es defensa con criterio — no sycophancy. Si tienes datos nuevos, dámelos y revaluamos.</span>`,
+        'agente · defendiendo posición');
     };
     messageEl.appendChild(warn);
   }
