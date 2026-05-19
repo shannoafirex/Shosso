@@ -51,7 +51,10 @@ window.Predictor = {
     const key = (prefix || '').toLowerCase().trim();
     let dist = this.TABLE[key];
     let usedKey = key;
-    if (!dist) dist = this._fuzzyMatch(key, wrap);
+    if (!dist) {
+      const fuzzy = this._fuzzyMatch(key);
+      if (fuzzy) { dist = fuzzy.dist; usedKey = fuzzy.key; }
+    }
     if (!dist) {
       wrap.innerHTML = `<div class="text-[11px] text-muted italic">Prueba con: "menos es", "el modelo", "context", "progressive", "cuando una skill falla", "tienes".</div>`;
       return;
@@ -66,26 +69,22 @@ window.Predictor = {
         <span class="font-mono text-muted w-12 text-right">${(p*100).toFixed(0)}%</span>
       </div>
     `).join('');
-    const hint = key && key !== usedKey ? `<div class="text-[10px] text-muted italic mb-1">≈ usando match: "${escapeHtml(usedKey)}"</div>` : '';
+    const hint = key && key !== usedKey ? `<div class="text-[10px] text-muted italic mb-1">≈ match cercano: "${escapeHtml(usedKey)}"</div>` : '';
     wrap.innerHTML = hint + bars;
   },
 
-  _fuzzyMatch(key, wrap) {
+  _fuzzyMatch(key) {
     if (!key) return null;
     const keys = Object.keys(this.TABLE);
     let best = null, bestScore = 0;
+    const lastWord = key.split(/\s+/).pop();
+    if (!lastWord) return null;
     for (const k of keys) {
-      const lastWord = key.split(/\s+/).pop();
       if (k.endsWith(lastWord) || k.startsWith(lastWord) || k.includes(lastWord)) {
         const score = lastWord.length / k.length;
         if (score > bestScore) { best = k; bestScore = score; }
       }
     }
-    if (best) {
-      // Mutamos para que render mostre el hint
-      this._lastFuzzyKey = best;
-      return this.TABLE[best];
-    }
-    return null;
+    return best ? { key: best, dist: this.TABLE[best] } : null;
   }
 };

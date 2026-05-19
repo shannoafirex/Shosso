@@ -34,9 +34,8 @@ window.Demo = {
     await Dispatcher.dispatch('analiza propuesta de auspicio: dailygrind.io, $3.500/post, 12 entregables');
     await $(800);
 
-    // 4. /grebloop
-    ReviewLoop.run('PR pequeño: nuevo endpoint /sponsors/decision');
-    await $(4500);
+    // 4. /grebloop — esperamos su convergencia explícitamente
+    await ReviewLoop.run('PR pequeño: nuevo endpoint /sponsors/decision');
 
     // 5. Knowledge work
     KnowledgeWork.run('contract-review');
