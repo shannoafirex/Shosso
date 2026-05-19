@@ -204,13 +204,18 @@ window.WorkspaceImport = {
     if (opts.diagnostics && Array.isArray(d.diagnostics) && window.Diagnostics) {
       for (const f of d.diagnostics) {
         if (!f.skillId || !f.symptom) continue;
-        // Anti-duplicado: skill + symptom + fecha igual = skip
-        const sig = `${f.skillId}|${f.symptom}|${f.date}`;
+        // Normalize date — render hace .slice() y new Date().getTime(),
+        // ambos fallan con date no-string o no-ISO.
+        const safeDate = (typeof f.date === 'string' && f.date.length >= 10)
+          ? f.date
+          : new Date().toISOString();
+        const sig = `${f.skillId}|${f.symptom}|${safeDate}`;
         const exists = window.Diagnostics.failures.some(x => `${x.skillId}|${x.symptom}|${x.date}` === sig);
         if (!exists) {
           window.Diagnostics.failures.push({
             ...f,
-            id: 'imp-diag-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5)
+            id: 'imp-diag-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+            date: safeDate
           });
           report.diagnostics++;
         }
