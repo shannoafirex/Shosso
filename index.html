@@ -213,6 +213,7 @@
           <div class="flex gap-2">
             <input id="cfg-anthropic-key" type="password" placeholder="sk-ant-…" class="flex-1 bg-panel2 border border-border rounded p-1.5 outline-none focus:border-accent" />
             <button id="cfg-anthropic-save" class="text-xs px-3 rounded bg-accent/20 text-accent">Guardar</button>
+            <button id="cfg-anthropic-clear" aria-label="Borrar API key Anthropic" class="text-xs px-2 rounded bg-danger/20 text-danger hover:bg-danger/30" title="Borrar key guardada">🗑</button>
           </div>
           <p id="cfg-anthropic-status" class="text-[10px] text-muted mt-1"></p>
         </div>
@@ -228,12 +229,13 @@
           <div class="flex gap-2">
             <input id="cfg-openai-key" type="password" placeholder="sk-…" class="flex-1 bg-panel2 border border-border rounded p-1.5 outline-none focus:border-accent" />
             <button id="cfg-openai-save" class="text-xs px-3 rounded bg-accent/20 text-accent">Guardar</button>
+            <button id="cfg-openai-clear" aria-label="Borrar API key OpenAI" class="text-xs px-2 rounded bg-danger/20 text-danger hover:bg-danger/30" title="Borrar key guardada">🗑</button>
           </div>
           <p id="cfg-openai-status" class="text-[10px] text-muted mt-1"></p>
         </div>
         <div>
           <label class="block text-xs text-muted mb-1">Max tokens por respuesta</label>
-          <input id="cfg-max-tokens" type="number" min="256" max="32000" value="4096" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none" />
+          <input id="cfg-max-tokens" type="number" min="256" max="32000" step="256" value="4096" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none" />
         </div>
         <div>
           <label class="block text-xs text-muted mb-1">Auto-compact (%)</label>

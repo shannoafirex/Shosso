@@ -53,6 +53,8 @@ window.Settings = {
 
     document.getElementById('cfg-anthropic-save').onclick = () => this._saveKey('anthropic');
     document.getElementById('cfg-openai-save').onclick = () => this._saveKey('openai');
+    document.getElementById('cfg-anthropic-clear')?.addEventListener('click', () => this._clearKey('anthropic'));
+    document.getElementById('cfg-openai-clear')?.addEventListener('click', () => this._clearKey('openai'));
 
     // Show/hide eye toggle for password inputs so the user can verify a
     // pasted key. Toggles only the input it sits next to.
@@ -128,6 +130,17 @@ window.Settings = {
     await this._refreshKeyStatus();
   },
 
+  async _clearKey(which) {
+    const label = which === 'anthropic' ? 'Anthropic' : 'OpenAI';
+    if (!confirm(`¿Borrar la API key de ${label} guardada en safeStorage?\n\nVas a tener que volver a pegarla.`)) return;
+    try {
+      await window.shosso.secrets.clear(which);
+    } catch (err) {
+      return alert('Error borrando la key: ' + (err.message || err));
+    }
+    await this._refreshKeyStatus();
+  },
+
   async _refreshKeyStatus() {
     for (const which of ['anthropic', 'openai']) {
       const has = await window.shosso.secrets.has(which);
@@ -150,6 +163,7 @@ window.Settings = {
     document.getElementById('cfg-openai-block').classList.toggle('hidden', provider !== 'openai');
     const modal = document.getElementById('settings-modal');
     modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
     // Remember where focus was so we can restore it on close.
     this._prevFocus = document.activeElement;
     // Move focus into the dialog and trap Tab inside it. Without this,
@@ -161,6 +175,7 @@ window.Settings = {
   close() {
     const modal = document.getElementById('settings-modal');
     modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
     this._removeFocusTrap();
     // Mask any password inputs that the user revealed.
     ['cfg-anthropic-key', 'cfg-openai-key'].forEach(id => {
