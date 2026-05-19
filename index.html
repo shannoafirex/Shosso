@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https://cdn.tailwindcss.com https://cdn.jsdelivr.net; img-src 'self' data:;" />
+  <title>Shosso</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="src/styles.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0b0e14',
+            panel: '#11151c',
+            panel2: '#161b22',
+            border: '#222831',
+            accent: '#7c5cff',
+            accent2: '#22d3ee',
+            success: '#22c55e',
+            warn: '#f59e0b',
+            danger: '#ef4444',
+            muted: '#8a93a6'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-bg text-gray-200 h-screen overflow-hidden font-sans">
+  <!-- Top bar -->
+  <header class="flex items-center justify-between px-4 h-12 border-b border-border bg-panel">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded-md bg-gradient-to-br from-accent to-accent2 flex items-center justify-center font-bold text-sm">S</div>
+      <h1 class="font-semibold tracking-tight">Shosso</h1>
+      <span class="text-xs text-muted hidden md:inline">IDE nativo de skills · context-aware</span>
+      <span id="model-pill" class="hidden md:inline text-[10px] uppercase tracking-wider bg-success/15 text-success px-2 py-0.5 rounded-full">modelo: bueno</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <div id="productivity-pill" class="hidden sm:flex items-center gap-2 text-xs">
+        <span class="text-muted">Productividad</span>
+        <span id="productivity-score" class="font-mono px-2 py-0.5 rounded bg-panel2">—</span>
+      </div>
+      <div class="hidden sm:flex flex-col text-xs">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-muted">Contexto</span>
+          <span id="ctx-numbers" class="font-mono">0 / 200k</span>
+        </div>
+        <div class="w-56 h-1.5 bg-panel2 rounded-full overflow-hidden mt-1">
+          <div id="ctx-bar" class="h-full bg-gradient-to-r from-accent to-accent2 transition-all" style="width:0%"></div>
+        </div>
+      </div>
+      <button id="btn-tutorial" class="text-xs px-2 py-1 rounded bg-accent/20 text-accent hover:bg-accent/30" title="Onboarding rundown">Tour</button>
+      <button id="btn-reset" class="text-xs px-2 py-1 rounded bg-panel2 hover:bg-border" title="Resetea la sesión">Reset</button>
+    </div>
+  </header>
+
+  <!-- Main layout -->
+  <main class="grid grid-cols-12 h-[calc(100vh-3rem-1.75rem)]">
+    <!-- Left: File explorer + templates -->
+    <aside class="col-span-2 border-r border-border bg-panel overflow-y-auto flex flex-col">
+      <div class="px-3 py-2 text-xs uppercase tracking-wider text-muted flex justify-between items-center">
+        <span>Archivos</span>
+        <div class="flex gap-2">
+          <button id="btn-open-folder" class="hover:text-accent2" title="Abrir carpeta">⌂</button>
+          <button id="btn-new-file" class="hover:text-accent2" title="Nuevo archivo">+</button>
+        </div>
+      </div>
+      <ul id="file-tree" class="text-sm flex-1"></ul>
+      <div class="border-t border-border px-3 py-2">
+        <div class="text-xs uppercase tracking-wider text-muted flex justify-between items-center mb-1">
+          <span>Templates</span>
+          <button id="btn-template-info" class="text-muted hover:text-accent2" title="Por qué los templates están volviendo">?</button>
+        </div>
+        <ul id="template-list" class="text-xs space-y-1"></ul>
+      </div>
+    </aside>
+
+    <!-- Center: Editor + bottom panel -->
+    <section class="col-span-7 flex flex-col">
+      <div id="tabs" class="flex items-center bg-panel border-b border-border h-9 px-1 overflow-x-auto"></div>
+      <div id="editor" class="flex-1"></div>
+      <div class="h-52 border-t border-border bg-panel">
+        <div class="flex items-center border-b border-border">
+          <button data-tab="chat" class="bottom-tab px-3 py-1.5 text-xs border-r border-border bg-panel2">Chat con el agente</button>
+          <button data-tab="terminal" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Terminal (mock)</button>
+          <button data-tab="logs" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Logs de contexto</button>
+          <button data-tab="diagnostics" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Diagnóstico de fallos</button>
+          <span id="compaction-badge" class="hidden ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-warn/20 text-warn animate-pulse">⚠ compactación cerca</span>
+        </div>
+        <div id="bottom-panels" class="h-[calc(100%-2rem)]">
+          <div data-panel="chat" class="bottom-panel h-full flex flex-col">
+            <div id="chat-log" class="flex-1 overflow-y-auto p-3 space-y-2 text-sm flex flex-col"></div>
+            <form id="chat-form" class="flex items-center border-t border-border">
+              <input id="chat-input" type="text" placeholder="Pídele algo al agente… (ej: 'genera reporte semanal', 'investiga este patrocinador')" class="flex-1 bg-transparent px-3 py-2 text-sm outline-none" autocomplete="off" />
+              <button class="px-3 text-xs text-accent2 hover:text-white">Enviar</button>
+            </form>
+          </div>
+          <div data-panel="terminal" class="bottom-panel hidden h-full p-3 font-mono text-xs overflow-y-auto" id="terminal">
+            <div class="text-muted">$ shosso --version</div>
+            <div>Shosso 0.1.0 (Electron)</div>
+            <div class="text-muted mt-2">$ ls skills/</div>
+            <div id="terminal-skills"></div>
+          </div>
+          <div data-panel="logs" class="bottom-panel hidden h-full p-3 font-mono text-xs overflow-y-auto" id="ctx-logs"></div>
+          <div data-panel="diagnostics" class="bottom-panel hidden h-full p-3 overflow-y-auto" id="diagnostics-panel"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Skills / Agents / Context / Tokenizer / System / Memory -->
+    <aside class="col-span-3 border-l border-border bg-panel flex flex-col">
+      <nav class="flex border-b border-border overflow-x-auto">
+        <button data-tab="skills" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide bg-panel2">Skills</button>
+        <button data-tab="agents" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Agentes</button>
+        <button data-tab="context" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Contexto</button>
+        <button data-tab="memory" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Memoria</button>
+        <button data-tab="tokenizer" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Tokens</button>
+        <button data-tab="system" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Sistema</button>
+      </nav>
+      <div class="flex-1 overflow-y-auto">
+        <!-- Skills panel -->
+        <div data-panel="skills" class="side-panel p-3 space-y-2">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="font-semibold text-sm">Skills disponibles</h2>
+            <div class="flex gap-1">
+              <button id="btn-new-skill" class="text-xs px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30">+ Skill</button>
+              <button id="btn-import-skill" class="text-xs px-2 py-0.5 rounded bg-panel2 hover:bg-border" title="Importar skill externa">⤓</button>
+            </div>
+          </div>
+          <p class="text-xs text-muted leading-snug mb-2">Solo nombre + descripción están en contexto. El cuerpo se carga cuando el agente lo necesita (progressive disclosure).</p>
+          <ul id="skills-list" class="space-y-2"></ul>
+        </div>
+
+        <!-- Agents panel -->
+        <div data-panel="agents" class="side-panel hidden p-3 space-y-3">
+          <h2 class="font-semibold text-sm">Orquesta de agentes</h2>
+          <p class="text-xs text-muted leading-snug">Un agente principal; los sub-agentes solo aparecen cuando aportan productividad real.</p>
+          <ul id="agents-list" class="space-y-2"></ul>
+          <button id="btn-new-agent" class="w-full mt-2 text-xs px-2 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30">+ Sub-agente</button>
+          <div id="productivity-warning" class="hidden mt-3 p-2 rounded bg-warn/10 border border-warn/30 text-xs text-warn"></div>
+        </div>
+
+        <!-- Context panel -->
+        <div data-panel="context" class="side-panel hidden p-3 space-y-3">
+          <h2 class="font-semibold text-sm">Composición del contexto</h2>
+          <p class="text-xs text-muted leading-snug">Menos es más. Vigila lo que se inyecta en cada turno.</p>
+          <div id="ctx-breakdown" class="space-y-1.5"></div>
+          <div class="mt-3 pt-3 border-t border-border">
+            <h3 class="text-xs uppercase tracking-wide text-muted mb-2">Política</h3>
+            <label class="flex items-center justify-between text-xs">
+              <span>Cargar agent.md por defecto</span>
+              <input type="checkbox" id="cfg-load-agentmd" class="accent-accent" />
+            </label>
+            <p class="text-[11px] text-muted mt-1 leading-snug">Recomendado: desactivado. Sólo actívalo si tienes información propietaria que debe estar siempre presente.</p>
+            <label class="flex items-center justify-between text-xs mt-3">
+              <span>Auto-compactación al 80%</span>
+              <input type="checkbox" id="cfg-auto-compact" class="accent-accent" checked />
+            </label>
+            <p class="text-[11px] text-muted mt-1 leading-snug">Como hacen Claude Code y Codex: comprime la conversación antes de que el modelo se degrade.</p>
+          </div>
+        </div>
+
+        <!-- Memory panel -->
+        <div data-panel="memory" class="side-panel hidden p-3 space-y-3">
+          <h2 class="font-semibold text-sm">Capa de memoria</h2>
+          <p class="text-xs text-muted leading-snug">Hechos persistentes entre sesiones. NO viven en el contexto principal; se recuperan cuando son relevantes (igual que skills, progressive).</p>
+          <div id="memory-list" class="space-y-2"></div>
+          <form id="memory-form" class="flex gap-1 mt-2">
+            <input id="memory-input" placeholder="Anota un hecho persistente…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-xs outline-none focus:border-accent" />
+            <button class="text-xs px-2 py-1 rounded bg-accent/20 text-accent">+</button>
+          </form>
+        </div>
+
+        <!-- Tokenizer panel -->
+        <div data-panel="tokenizer" class="side-panel hidden p-3 space-y-3">
+          <h2 class="font-semibold text-sm">Tokenizador</h2>
+          <p class="text-xs text-muted leading-snug">Inspecciona el coste real de cualquier texto antes de pegarlo a un agent.md o a un mensaje.</p>
+          <textarea id="tokenizer-input" rows="6" placeholder="Pega aquí lo que quieres medir…" class="w-full bg-panel2 border border-border rounded px-2 py-1 text-xs font-mono outline-none focus:border-accent"></textarea>
+          <div class="grid grid-cols-3 gap-2 text-center">
+            <div class="bg-panel2 p-2 rounded">
+              <div class="text-[10px] uppercase text-muted">chars</div>
+              <div id="tk-chars" class="font-mono text-sm">0</div>
+            </div>
+            <div class="bg-panel2 p-2 rounded">
+              <div class="text-[10px] uppercase text-muted">tokens</div>
+              <div id="tk-tokens" class="font-mono text-sm text-accent">0</div>
+            </div>
+            <div class="bg-panel2 p-2 rounded">
+              <div class="text-[10px] uppercase text-muted">€/M*</div>
+              <div id="tk-cost" class="font-mono text-sm">€0.000</div>
+            </div>
+          </div>
+          <div id="tk-visual" class="font-mono text-xs leading-relaxed p-2 bg-panel2 rounded border border-border whitespace-pre-wrap"></div>
+          <p class="text-[10px] text-muted">* Estimación a tarifa típica de input. Los tokens reales dependen del tokenizador del proveedor.</p>
+        </div>
+
+        <!-- System prompt panel -->
+        <div data-panel="system" class="side-panel hidden p-3 space-y-3">
+          <h2 class="font-semibold text-sm">System prompt + harness</h2>
+          <p class="text-xs text-muted leading-snug">Lo que SIEMPRE va en cada turno aunque no lo veas. Hacerlo visible es 50% de saber usar agentes.</p>
+          <div class="space-y-2">
+            <details class="bg-panel2 rounded border border-border">
+              <summary class="cursor-pointer px-2 py-1.5 text-xs font-semibold flex justify-between">
+                <span>System prompt</span>
+                <span class="font-mono text-muted" id="sys-prompt-tokens">—</span>
+              </summary>
+              <pre id="sys-prompt-body" class="text-[11px] p-2 whitespace-pre-wrap font-mono max-h-72 overflow-y-auto"></pre>
+            </details>
+            <details class="bg-panel2 rounded border border-border">
+              <summary class="cursor-pointer px-2 py-1.5 text-xs font-semibold flex justify-between">
+                <span>Tools / harness</span>
+                <span class="font-mono text-muted" id="sys-tools-tokens">—</span>
+              </summary>
+              <ul id="sys-tools-body" class="text-[11px] p-2 space-y-1"></ul>
+            </details>
+            <details class="bg-panel2 rounded border border-border" id="agentmd-section">
+              <summary class="cursor-pointer px-2 py-1.5 text-xs font-semibold flex justify-between">
+                <span>agent.md (opcional)</span>
+                <span class="font-mono text-muted" id="sys-agentmd-tokens">desactivado</span>
+              </summary>
+              <textarea id="agentmd-body" rows="6" placeholder="Sólo si tienes información propietaria que el agente necesita en CADA turno." class="w-full text-[11px] p-2 bg-bg font-mono outline-none"></textarea>
+            </details>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Status bar -->
+  <footer class="h-7 border-t border-border bg-panel flex items-center justify-between px-3 text-[11px] text-muted">
+    <div id="status-left">Listo</div>
+    <div class="flex items-center gap-3">
+      <span id="status-iter" class="hidden">iter: 0</span>
+      <span id="status-right" class="font-mono">tokens: 0</span>
+    </div>
+  </footer>
+
+  <!-- Skill builder modal -->
+  <div id="skill-builder" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-panel border border-border rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-border px-4 py-3">
+        <div>
+          <h3 class="font-semibold">Constructor recursivo de skills</h3>
+          <p class="text-xs text-muted">Recorre el workflow con el agente y codifícalo solo al final.</p>
+        </div>
+        <button id="sb-close" class="text-muted hover:text-white">✕</button>
+      </div>
+      <div id="sb-body" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm"></div>
+      <div class="border-t border-border p-3 flex justify-between items-center gap-2">
+        <span id="sb-step" class="text-xs text-muted"></span>
+        <div class="flex gap-2">
+          <button id="sb-back" class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Atrás</button>
+          <button id="sb-next" class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tutorial / "rundown" overlay -->
+  <div id="tutorial" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+    <div class="bg-panel border border-border rounded-lg w-full max-w-xl flex flex-col">
+      <div class="flex items-center justify-between border-b border-border px-4 py-3">
+        <h3 id="tutorial-title" class="font-semibold">Onboarding</h3>
+        <button id="tutorial-close" class="text-muted hover:text-white">✕</button>
+      </div>
+      <div id="tutorial-body" class="p-4 text-sm space-y-3 max-h-[70vh] overflow-y-auto"></div>
+      <div class="border-t border-border p-3 flex justify-between gap-2">
+        <span id="tutorial-step" class="text-xs text-muted"></span>
+        <div class="flex gap-2">
+          <button id="tutorial-back" class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Atrás</button>
+          <button id="tutorial-next" class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monaco editor -->
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
+  <script src="src/data.js"></script>
+  <script src="src/tokens.js"></script>
+  <script src="src/skills.js"></script>
+  <script src="src/agents.js"></script>
+  <script src="src/context.js"></script>
+  <script src="src/memory.js"></script>
+  <script src="src/tokenizer.js"></script>
+  <script src="src/system-prompt.js"></script>
+  <script src="src/templates.js"></script>
+  <script src="src/productivity.js"></script>
+  <script src="src/compaction.js"></script>
+  <script src="src/diagnostics.js"></script>
+  <script src="src/mock-agent.js"></script>
+  <script src="src/skill-builder.js"></script>
+  <script src="src/tutorial.js"></script>
+  <script src="src/import-skill.js"></script>
+  <script src="src/app.js"></script>
+</body>
+</html>

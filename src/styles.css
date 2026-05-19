@@ -1,0 +1,100 @@
+html, body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+
+/* Side / bottom tabs */
+.side-tab, .bottom-tab { color: #8a93a6; }
+.side-tab.active, .bottom-tab.active { color: #fff; background: #161b22; }
+
+/* File tree */
+#file-tree li {
+  padding: 4px 12px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#file-tree li:hover { background: #161b22; }
+#file-tree li.active { background: #1d2330; color: #fff; }
+#file-tree li .icon { width: 14px; color: #8a93a6; }
+
+/* Tabs */
+#tabs .tab {
+  height: 100%;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  border-right: 1px solid #222831;
+  cursor: pointer;
+  color: #8a93a6;
+  white-space: nowrap;
+}
+#tabs .tab.active { background: #0b0e14; color: #fff; }
+#tabs .tab .close { opacity: 0.5; }
+#tabs .tab .close:hover { opacity: 1; color: #ef4444; }
+
+/* Chat messages */
+.msg { padding: 8px 10px; border-radius: 8px; max-width: 90%; word-wrap: break-word; }
+.msg-user { background: #1d2330; align-self: flex-end; margin-left: auto; }
+.msg-agent { background: #161b22; border-left: 2px solid #7c5cff; }
+.msg-system { background: transparent; border-left: 2px solid #f59e0b; padding: 4px 8px; font-size: 12px; color: #c2c8d3; }
+.msg-tool { background: #11151c; border: 1px dashed #222831; font-family: ui-monospace, monospace; font-size: 12px; }
+.msg .meta { font-size: 10px; color: #8a93a6; margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* Skill cards */
+.skill-card {
+  border: 1px solid #222831;
+  border-radius: 8px;
+  padding: 10px;
+  background: #11151c;
+  transition: border-color 0.15s;
+}
+.skill-card:hover { border-color: #2d3543; }
+.skill-card.loaded { border-color: #7c5cff; box-shadow: 0 0 0 1px #7c5cff inset; }
+.skill-card .name { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+.skill-card .desc { font-size: 11px; color: #8a93a6; margin-top: 2px; line-height: 1.35; }
+.skill-card .meta { display:flex; gap: 8px; margin-top: 6px; font-size: 10px; color: #8a93a6; text-transform: uppercase; letter-spacing: 0.04em; }
+.skill-card .meta .pill { background: #161b22; padding: 1px 6px; border-radius: 999px; }
+.skill-card .meta .pill.loaded { background: #7c5cff33; color: #c4b8ff; }
+.skill-card .body { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #222831; font-size: 11px; color: #c2c8d3; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+.skill-card.expanded .body { display: block; }
+.skill-card .actions { display: flex; gap: 6px; margin-top: 6px; }
+.skill-card .actions button { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #161b22; color: #c2c8d3; }
+.skill-card .actions button:hover { background: #222831; }
+
+/* Agent cards */
+.agent-card {
+  border: 1px solid #222831;
+  border-radius: 8px;
+  padding: 10px;
+  background: #11151c;
+}
+.agent-card.main { border-left: 3px solid #22d3ee; }
+.agent-card.sub { border-left: 3px solid #7c5cff; margin-left: 14px; position: relative; }
+.agent-card.sub::before {
+  content: ''; position: absolute; left: -14px; top: 50%;
+  width: 11px; height: 1px; background: #2d3543;
+}
+.agent-card .name { font-weight: 600; font-size: 13px; }
+.agent-card .role { font-size: 11px; color: #8a93a6; }
+.agent-card .skills-attached { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.agent-card .skills-attached span { font-size: 10px; background: #161b22; padding: 1px 6px; border-radius: 999px; color: #c2c8d3; }
+
+/* Context breakdown */
+.ctx-row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; }
+.ctx-row .label { display: flex; align-items: center; gap: 6px; }
+.ctx-row .dot { width: 8px; height: 8px; border-radius: 999px; }
+.ctx-row .val { font-family: ui-monospace, monospace; color: #c2c8d3; }
+.ctx-bar { height: 8px; background: #11151c; border-radius: 999px; overflow: hidden; display: flex; }
+.ctx-bar > span { height: 100%; }
+
+/* Animations */
+@keyframes pop { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.msg, .skill-card { animation: pop 0.15s ease-out; }
+
+/* Scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #222831; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2d3543; }
