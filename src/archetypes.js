@@ -217,6 +217,8 @@ window.Archetypes = {
   },
 
   openPicker() {
+    // Idempotente: si ya hay picker abierto, foco al search-cero (o no-op)
+    if (document.querySelector('.arch-card')) return;
     SafeStorage.safeSet('shosso.archetype-seen', true);
     const all = this._all();
     const modal = document.createElement('div');

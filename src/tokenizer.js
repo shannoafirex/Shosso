@@ -28,16 +28,23 @@ window.Tokenizer = {
     document.getElementById('tk-visual').innerHTML = visual;
   },
 
-  // Pseudo-tokenización visual: corta por palabras + signos.
+  // Pseudo-tokenización visual: corta por palabras + signos. Cap a 5000
+  // chars para no quemar el DOM con textos enormes.
   _splitVisual(text) {
     if (!text) return '<span class="text-muted">(pega texto arriba)</span>';
+    const MAX = 5000;
+    const truncated = text.length > MAX;
+    const sample = truncated ? text.slice(0, MAX) : text;
     const palette = ['#7c5cff33', '#22d3ee33', '#22c55e33', '#f59e0b33', '#ef444433'];
     let i = 0;
-    return text.replace(/(\s+|[^\w\s]+|\w+)/g, (m) => {
+    const html = sample.replace(/(\s+|[^\w\s]+|\w+)/g, (m) => {
       if (m.match(/^\s+$/)) return m;
       const color = palette[i++ % palette.length];
       return `<span style="background:${color};padding:0 1px;border-radius:2px">${escapeHtml(m)}</span>`;
     });
+    return truncated
+      ? html + `<div class="text-[10px] text-muted italic mt-2">…texto truncado a ${MAX} chars para visualización. Los tokens contados arriba sí cubren el texto completo.</div>`
+      : html;
   },
 
   // API para que otros módulos pidan medición.
