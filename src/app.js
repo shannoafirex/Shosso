@@ -405,12 +405,19 @@ function setupElectronBridge() {
   window.shosso.onOpenFolder(async (dir) => {
     Context.log(`Abriendo carpeta: ${dir}`);
     const entries = await window.shosso.readDir(dir);
-    if (entries.error) { alert('Error: ' + entries.error); return; }
+    if (!entries || entries.error) {
+      alert('Error: ' + (entries?.error || 'respuesta inesperada'));
+      return;
+    }
+    if (!Array.isArray(entries)) {
+      alert('Error: el directorio devolvió formato inesperado');
+      return;
+    }
     // Carga hasta 30 archivos para no inundar el editor.
     for (const e of entries.slice(0, 30)) {
-      if (e.isDir) continue;
+      if (!e || e.isDir) continue;
       const r = await window.shosso.readFile(e.path);
-      if (r.content !== undefined && !openFiles.find(f => f.path === e.name)) {
+      if (r && r.content !== undefined && !openFiles.find(f => f.path === e.name)) {
         openFiles.push({ path: e.name, language: detectLang(e.name), content: r.content });
       }
     }

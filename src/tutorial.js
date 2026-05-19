@@ -100,9 +100,13 @@ window.Tutorial = {
   },
 
   openCustom(title, paragraphs) {
-    this.custom = paragraphs;
-    this.customTitle = title;
+    this.custom = Array.isArray(paragraphs) ? paragraphs : [];
+    this.customTitle = title || 'Info';
     this.step = 0;
+    if (this.custom.length === 0) {
+      console.warn('Tutorial.openCustom: empty paragraphs, skipping');
+      return;
+    }
     document.getElementById('tutorial').classList.remove('hidden');
     this.render();
   },
