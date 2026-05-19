@@ -109,7 +109,19 @@ window.Tutorial = {
 
   close() {
     document.getElementById('tutorial').classList.add('hidden');
+    const wasSeen = !!localStorage.getItem('shosso.tutorial-seen');
     localStorage.setItem('shosso.tutorial-seen', '1');
+    // Si era la primera vez, dispara el archetype picker ahora — sin esto
+    // hay una race donde el setTimeout del archetype.init pasa antes de
+    // que el tour se cierre y nunca se muestra para first-time users.
+    if (!wasSeen && window.Archetypes) {
+      setTimeout(() => {
+        const archSeen = SafeStorage.safeGet('shosso.archetype-seen', false);
+        if (archSeen) return;
+        const msgs = SafeStorage.safeGet('shosso.chat.history', []);
+        if (msgs.length <= 3) Archetypes.openPicker();
+      }, 400);
+    }
   },
 
   _currentSteps() {

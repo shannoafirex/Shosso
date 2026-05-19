@@ -24,6 +24,10 @@ window.MockAgent = {
 
   async send(userText) {
     if (!userText.trim()) return;
+    // Asegura que el chat es visible — si el usuario invoca un comando
+    // desde shortcut o palette estando en otro tab, vería el output
+    // perdido. El form de chat ya está en chat así que click() es no-op.
+    document.querySelector('.bottom-tab[data-tab="chat"]')?.click();
     this.turn++;
     this.log('user', escapeHtml(userText), 'tú');
     Context.addConversationTokens(estimateTokens(userText));
