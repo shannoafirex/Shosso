@@ -105,9 +105,14 @@ window.AgentsStore = {
             </div>
           </div>
         </div>
-        <div class="border-t border-border p-3 flex justify-end gap-2">
-          <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Cancelar</button>
-          <button data-save class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Guardar</button>
+        <div class="border-t border-border p-3 flex justify-between gap-2">
+          <div>
+            ${a.type === 'sub' ? `<button data-delete class="px-3 py-1.5 text-xs rounded bg-danger/15 text-danger hover:bg-danger/30">Borrar sub-agente</button>` : ''}
+          </div>
+          <div class="flex gap-2">
+            <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Cancelar</button>
+            <button data-save class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Guardar</button>
+          </div>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -125,6 +130,12 @@ window.AgentsStore = {
       this.render();
       if (window.Productivity) Productivity.refresh();
       if (window.Workshop) Workshop.render();
+      close();
+    };
+    const delBtn = modal.querySelector('[data-delete]');
+    if (delBtn) delBtn.onclick = () => {
+      if (!confirm(`¿Borrar sub-agente "${a.name}"? No reversible.`)) return;
+      this.remove(a.id);
       close();
     };
   }

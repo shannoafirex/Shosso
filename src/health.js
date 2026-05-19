@@ -118,7 +118,12 @@ window.Health = {
           label: 'Podar (eliminar)',
           action: () => {
             if (!confirm(`Borrar ${stale.length} memorias viejas sin uso?`)) return;
-            for (const m of stale) MemoryStore.remove(m.id);
+            // Batch: una sola persist + render + refresh en vez de 20
+            const stalIds = new Set(stale.map(m => m.id));
+            MemoryStore.items = MemoryStore.items.filter(m => !stalIds.has(m.id));
+            MemoryStore.persist();
+            MemoryStore.render();
+            if (window.Productivity) Productivity.refresh();
             MockAgent.log('system', `🧹 Podadas ${stale.length} memorias inactivas.`);
           }
         } : null

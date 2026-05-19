@@ -287,11 +287,18 @@ function setupListeners() {
     // Sugerencia de skills por matching nombre → tag.
     // Marketing → tag growth; support → tag support; etc.
     const tagMap = {
+      // EN
       marketing: 'growth', growth: 'growth', sales: 'growth',
       support: 'support', success: 'support',
       product: 'product', design: 'product',
       eng: 'engineering', engineering: 'engineering', dev: 'engineering',
-      ops: 'engineering', devops: 'engineering'
+      ops: 'engineering', devops: 'engineering',
+      // ES
+      ventas: 'growth', mercadeo: 'growth', crecimiento: 'growth',
+      soporte: 'support', atencion: 'support', exito: 'support',
+      producto: 'product', diseno: 'product', diseño: 'product',
+      ingenieria: 'engineering', ingeniería: 'engineering',
+      desarrollo: 'engineering', operaciones: 'engineering'
     };
     const lower = name.toLowerCase();
     const matchedTag = Object.keys(tagMap).find(k => lower.includes(k));
@@ -339,18 +346,23 @@ function setupListeners() {
   });
 
   document.getElementById('btn-reset').addEventListener('click', async () => {
+    const projects = window.Projects ? Projects.list() : [];
+    const multi = projects.length > 1;
+    const detail = multi
+      ? `Nuke total: ${projects.length} proyectos, skills, archivos, memoria, agentes, diagnósticos, métricas, planes, archetypes custom, atajos. TODO. No reversible.`
+      : 'Se perderán skills, archivos virtuales, memoria, agentes, diagnósticos, métricas, planes. No reversible.';
     let ok = false;
     if (window.shosso?.confirm) {
       const r = await window.shosso.confirm({
         type: 'warning',
-        title: 'Reset completo',
+        title: multi ? 'Reset completo (TODOS los proyectos)' : 'Reset completo',
         message: '¿Reiniciar el IDE completo?',
-        detail: 'Se perderán tus skills, archivos virtuales, memoria, agentes y diagnósticos.',
-        buttons: ['Cancelar', 'Resetear']
+        detail,
+        buttons: ['Cancelar', 'Resetear todo']
       });
       ok = r === 1;
     } else {
-      ok = confirm('¿Reiniciar el IDE completo? Se perderán skills, archivos, memoria y agentes.');
+      ok = confirm(`¿Reiniciar el IDE completo?\n\n${detail}`);
     }
     if (!ok) return;
     localStorage.clear();
