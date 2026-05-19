@@ -145,7 +145,7 @@ window.Tools = (() => {
         ensureRoot();
         const r = await window.shosso.fs.writeFile(path.resolve(args.path), args.content);
         if (r.error) return { error: r.error };
-        document.dispatchEvent(new CustomEvent('shosso:fileWritten', { detail: args.path }));
+        document.dispatchEvent(new CustomEvent('shosso:fileWritten', { detail: path.resolve(args.path) }));
         return { ok: true };
       }
       case 'edit_file': {
@@ -159,7 +159,7 @@ window.Tools = (() => {
         const updated = r.content.replace(args.old_string, args.new_string);
         const w = await window.shosso.fs.writeFile(p, updated);
         if (w.error) return { error: w.error };
-        document.dispatchEvent(new CustomEvent('shosso:fileWritten', { detail: args.path }));
+        document.dispatchEvent(new CustomEvent('shosso:fileWritten', { detail: path.resolve(args.path) }));
         return { ok: true, occurrences: 1 };
       }
       case 'list_dir': {

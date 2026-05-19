@@ -113,11 +113,11 @@
         <div id="bottom-panels" class="flex-1 overflow-hidden">
           <div data-panel="chat" class="bottom-panel h-full flex flex-col">
             <div id="chat-log" class="flex-1 overflow-y-auto p-3 space-y-2 text-sm"></div>
-            <form id="chat-form" class="flex items-center border-t border-border">
-              <input id="chat-input" type="text" placeholder="Pídele algo al agente… (lee/escribe ficheros, corre comandos, busca en el código)"
-                class="flex-1 bg-transparent px-3 py-2 text-sm outline-none" autocomplete="off" />
-              <button id="chat-stop" type="button" class="hidden px-3 text-xs text-danger hover:text-white">Detener</button>
-              <button class="px-3 text-xs text-accent2 hover:text-white">Enviar</button>
+            <form id="chat-form" class="flex items-end border-t border-border">
+              <textarea id="chat-input" rows="1" placeholder="Pídele algo al agente… (Shift+Enter = nueva línea)"
+                class="flex-1 bg-transparent px-3 py-2 text-sm outline-none resize-none max-h-40" autocomplete="off"></textarea>
+              <button id="chat-stop" type="button" class="hidden px-3 py-2 text-xs text-danger hover:text-white">Detener</button>
+              <button class="px-3 py-2 text-xs text-accent2 hover:text-white">Enviar</button>
             </form>
           </div>
           <div data-panel="terminal" class="bottom-panel hidden h-full">
@@ -212,8 +212,7 @@
             <option value="gpt-4o" selected>gpt-4o</option>
             <option value="gpt-4o-mini">gpt-4o-mini</option>
             <option value="gpt-4.1">gpt-4.1</option>
-            <option value="o1">o1</option>
-            <option value="o3-mini">o3-mini</option>
+            <option value="gpt-4.1-mini">gpt-4.1-mini</option>
           </select>
           <label class="block text-xs text-muted mt-3 mb-1">OPENAI_API_KEY</label>
           <div class="flex gap-2">

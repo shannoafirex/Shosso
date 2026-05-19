@@ -16,11 +16,12 @@ window.Compaction = {
     if (btn) { btn.disabled = true; btn.textContent = 'Compactando…'; }
     try {
       const summary = await Agent.summarizeConversation(Context.conversation);
-      const kept = Context.conversation.slice(-2); // keep last user+assistant turn
+      // Replace history with a single user/assistant pair containing the
+      // summary. Preserving the tail is unsafe — a trailing tool_result
+      // without its preceding tool_use would make the next request invalid.
       Context.conversation = [
-        { role: 'user', content: `[Resumen comprimido de turnos previos]\n${summary}` },
-        { role: 'assistant', content: 'Entendido, continúo a partir de aquí.' },
-        ...kept
+        { role: 'user', content: `[Resumen comprimido de la conversación previa]\n${summary}` },
+        { role: 'assistant', content: 'Entendido, continúo desde aquí.' }
       ];
       Context.refresh();
       Agent.appendChat('system', `🗜 Conversación compactada. Resumen guardado como primer turno.`);
@@ -33,6 +34,9 @@ window.Compaction = {
   },
 
   async maybeAuto() {
+    // Never compact mid-turn: the running loop mutates Context with
+    // tool_result blocks and snipping them would desync the conversation.
+    if (window.Agent && Agent.currentRunId) return;
     const settings = window._settings || {};
     const thr = (settings.autoCompactPct ?? 0.8);
     const est = Context.estimateNextInput();

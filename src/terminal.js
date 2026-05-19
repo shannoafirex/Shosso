@@ -67,9 +67,10 @@ window.Terminal = {
     }).observe(el);
 
     document.addEventListener('shosso:rootChanged', () => {
-      if (this.ptyId && Projects.root) {
-        window.shosso.pty.write(this.ptyId, `cd "${Projects.root}"\n`);
-      }
+      if (!this.ptyId || !Projects.root) return;
+      // On Windows shells, prefer forward slashes; quote always.
+      const p = Projects.root.replace(/\\/g, '/').replace(/"/g, '\\"');
+      window.shosso.pty.write(this.ptyId, `cd "${p}"\n`);
     });
   },
 

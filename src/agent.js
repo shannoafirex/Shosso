@@ -11,11 +11,39 @@ window.Agent = {
       const v = inp.value.trim();
       if (!v) return;
       inp.value = '';
+      inp.style.height = '';
       this.userMessage(v);
+    });
+    // Shift+Enter = newline, Enter = send
+    const chatInput = document.getElementById('chat-input');
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('chat-form').requestSubmit();
+      }
+    });
+    chatInput.addEventListener('input', () => {
+      chatInput.style.height = '';
+      chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
     });
     document.getElementById('chat-stop').onclick = () => this.abort();
     document.getElementById('tools-list').innerHTML = Tools.defs.map(t =>
       `<li>· ${t.name}</li>`).join('');
+
+    // Register the LLM event listener exactly once. It dispatches by runId
+    // to whichever turn is currently active.
+    window.shosso.llm.onEvent((runId, evt) => {
+      if (runId !== this.currentRunId) return;
+      if (evt.type === 'text_delta' && this._streamingEl) {
+        this._streamText += evt.text;
+        this._streamingEl.innerHTML = `<div class="text-[10px] text-muted">${this._streamMeta}</div>${this._renderMarkdown(this._streamText)}`;
+        const log = document.getElementById('chat-log');
+        log.scrollTop = log.scrollHeight;
+      }
+      if (evt.type === 'block_start' && evt.block?.type === 'tool_use') {
+        this.appendLog(`tool_call: ${evt.block.name}`);
+      }
+    });
   },
 
   appendChat(role, html, meta) {
@@ -52,6 +80,10 @@ window.Agent = {
   },
 
   async userMessage(text) {
+    if (this.currentRunId) {
+      this.appendChat('system', '⚠ Hay un turno en curso. Pulsa Detener antes de enviar otro mensaje.');
+      return;
+    }
     this.appendChat('user', escapeHtml(text), 'tú');
 
     // Inject any skill mentioned by name as a system note for this turn.
@@ -68,6 +100,10 @@ window.Agent = {
   },
 
   async invokeSkill(skill) {
+    if (this.currentRunId) {
+      this.appendChat('system', '⚠ Hay un turno en curso.');
+      return;
+    }
     const msg = `Aplica la skill "${skill.name}" según sus instrucciones.`;
     this.appendChat('user', escapeHtml(msg), 'tú · invoke skill');
     const perTurnSystem = `## Skill: ${skill.name}\n${skill.description}\n\n${skill.body}`;
@@ -114,28 +150,21 @@ window.Agent = {
         maxTokens: s.maxTokens || 4096
       };
 
-      // Streaming UI: create a placeholder assistant message and stream into it.
+      // Streaming UI: create a placeholder assistant message; the single
+      // global event listener (registered in init) streams into it.
       const assistantEl = this.appendChat('assistant', '<span class="text-muted">…</span>', `${provider} · ${model}`);
-      let streamText = '';
-      const eventHandler = (runId, evt) => {
-        if (runId !== this.currentRunId) return;
-        if (evt.type === 'text_delta') {
-          streamText += evt.text;
-          assistantEl.innerHTML = `<div class="text-[10px] text-muted">${provider} · ${model}</div>${this._renderMarkdown(streamText)}`;
-        }
-        if (evt.type === 'block_start' && evt.block?.type === 'tool_use') {
-          this.appendLog(`tool_call: ${evt.block.name}`);
-        }
-      };
-      window.shosso.llm.onEvent(eventHandler);
+      this._streamingEl = assistantEl;
+      this._streamText = '';
+      this._streamMeta = `${provider} · ${model}`;
 
       let res;
       try {
         res = await window.shosso.llm.run(opts);
       } catch (err) {
-        this.appendChat('system', `⚠ Error: ${escapeHtml(err.message)}`);
+        assistantEl.innerHTML = `<div class="text-danger text-xs">⚠ ${escapeHtml(err.message)}</div>`;
         this.setRunStatus(null);
         this.currentRunId = null;
+        this._streamingEl = null;
         return;
       }
 
@@ -143,6 +172,7 @@ window.Agent = {
         assistantEl.innerHTML = `<div class="text-danger text-xs">⚠ ${escapeHtml(res.error)}</div>`;
         this.setRunStatus(null);
         this.currentRunId = null;
+        this._streamingEl = null;
         return;
       }
 
@@ -154,13 +184,14 @@ window.Agent = {
       // Render tool calls into chat for visibility
       const toolUses = res.content.filter(b => b.type === 'tool_use');
       if (toolUses.length === 0) {
-        // Final answer; ensure rendered
         const finalText = res.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
-        if (finalText && finalText !== streamText) {
+        if (finalText && finalText !== this._streamText) {
           assistantEl.innerHTML = `<div class="text-[10px] text-muted">${provider} · ${model}</div>${this._renderMarkdown(finalText)}`;
         }
+        this._streamingEl = null;
         break;
       }
+      this._streamingEl = null;
 
       // Execute tools sequentially; collect tool_result blocks
       const toolResults = [];

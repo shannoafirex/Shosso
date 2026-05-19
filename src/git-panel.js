@@ -31,10 +31,13 @@ window.GitPanel = {
       summary.textContent = 'No es un repo git.';
       filesWrap.innerHTML = `<button id="git-init" class="text-[11px] px-2 py-1 rounded bg-panel2 hover:bg-border">git init</button>`;
       branchPill.classList.add('hidden');
-      document.getElementById('git-init').onclick = async () => {
+      const initBtn = document.getElementById('git-init');
+      initBtn.onclick = async () => {
+        initBtn.disabled = true;
+        initBtn.textContent = 'init…';
         const x = await window.shosso.shell.exec('git init', Projects.root);
-        Agent.appendChat('system', x.stdout + (x.stderr ? '\n' + x.stderr : ''));
-        this.refresh();
+        Agent.appendChat('system', escapeHtml((x.stdout || '') + (x.stderr ? '\n' + x.stderr : '')));
+        await this.refresh();
       };
       return;
     }

@@ -26,6 +26,9 @@ window.Settings = {
 
     document.querySelectorAll('#settings-modal [data-close]').forEach(b =>
       b.onclick = () => this.close());
+    // Click outside the dialog closes it (modal backdrop).
+    const modal = document.getElementById('settings-modal');
+    modal.addEventListener('click', e => { if (e.target === modal) this.close(); });
 
     // System prompt persistence to settings (not a secret, just shared config)
     const sp = document.getElementById('system-prompt');

@@ -34,10 +34,15 @@ window.Editor = {
         });
         this.monaco.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => this.save());
 
+        let treeRefreshTimer = null;
         document.addEventListener('shosso:fileWritten', e => {
           const p = e.detail;
           const f = this.open.find(o => o.path === p || o.path.endsWith('/' + p));
           if (f && !f.dirty) this.reloadFromDisk(f.path);
+          // Debounce: if the agent writes many files in quick succession,
+          // only refresh the tree once at the end of the burst.
+          clearTimeout(treeRefreshTimer);
+          treeRefreshTimer = setTimeout(() => this._renderFileTree(), 300);
         });
         document.addEventListener('shosso:rootChanged', () => this._renderFileTree());
         document.getElementById('ft-refresh').onclick = () => this._renderFileTree();
