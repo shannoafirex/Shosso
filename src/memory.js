@@ -34,12 +34,14 @@ window.MemoryStore = {
     this.persist();
     this.render();
     Context.log(`Memoria añadida: "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`);
+    if (window.Productivity) Productivity.refresh();
   },
 
   remove(id) {
     this.items = this.items.filter(m => m.id !== id);
     this.persist();
     this.render();
+    if (window.Productivity) Productivity.refresh();
   },
 
   // Recupera ítems de memoria relevantes a un texto, simulando un retrieval.

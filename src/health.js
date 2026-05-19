@@ -200,6 +200,7 @@ window.Health = {
             window.Diagnostics.failures = window.Diagnostics.failures.filter(f => !resolvedOld.includes(f));
             window.Diagnostics.persist();
             window.Diagnostics.render();
+            if (window.Productivity) Productivity.refresh();
             MockAgent.log('system', `🗂 Archivados ${resolvedOld.length} fallos resueltos.`);
           }
         }

@@ -235,6 +235,34 @@ window.CommandPalette = {
     ];
     for (const a of actions) items.push({ category: 'Acción', ...a });
 
+    // Navegación: tabs inferiores + laterales
+    const bottomTabs = [
+      { label: 'Workshop (paralelo)', tab: 'workshop' },
+      { label: 'Terminal', tab: 'terminal' },
+      { label: 'Logs de contexto', tab: 'logs' },
+      { label: 'Diagnóstico de fallos', tab: 'diagnostics' },
+      { label: 'Chat con el agente', tab: 'chat' }
+    ];
+    for (const t of bottomTabs) {
+      items.push({
+        category: 'Ir a panel',
+        title: t.label,
+        subtitle: 'Bottom panel',
+        icon: '▾',
+        action: () => document.querySelector(`.bottom-tab[data-tab="${t.tab}"]`)?.click()
+      });
+    }
+    const sideTabs = ['skills', 'agents', 'plan', 'context', 'memory', 'tokenizer', 'system', 'security', 'philosophy'];
+    for (const t of sideTabs) {
+      items.push({
+        category: 'Ir a panel',
+        title: t.charAt(0).toUpperCase() + t.slice(1),
+        subtitle: 'Sidebar tab',
+        icon: '▸',
+        action: () => document.querySelector(`.side-tab[data-tab="${t}"]`)?.click()
+      });
+    }
+
     return items;
   },
 

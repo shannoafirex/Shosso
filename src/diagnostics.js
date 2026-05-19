@@ -28,6 +28,7 @@ window.Diagnostics = {
     this.persist();
     this.render();
     Context.log(`⚠ Fallo capturado en skill "${failure.skillId}": ${failure.symptom}`);
+    if (window.Productivity) Productivity.refresh();
     return item;
   },
 
