@@ -60,6 +60,7 @@ function init() {
   Archetypes.init();
   Shortcuts.init();
   CommandPalette.init();
+  Health.init();
   I18N.init();
   Overview.init();
   Tutorial.init();

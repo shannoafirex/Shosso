@@ -221,6 +221,7 @@ window.CommandPalette = {
       { title: 'Export workspace', subtitle: 'Snapshot MD/JSON', icon: '↗', action: () => WorkspaceExport.openModal() },
       { title: 'Import workspace', subtitle: 'Desde JSON', icon: '↘', action: () => WorkspaceImport.openModal() },
       { title: 'Overview', subtitle: 'Stats + ROI calculator', icon: '📊', action: () => Overview.open() },
+      { title: 'Health check', subtitle: 'Audit accionable del workspace', icon: '🩺', action: () => Health.open() },
       { title: 'Cambiar proyecto', subtitle: 'Switch project', icon: '📁', action: () => Projects.openMenu() },
       { title: 'Nueva skill', subtitle: 'Constructor recursivo', icon: '+', action: () => SkillBuilder.open() },
       { title: 'Nuevo plan', subtitle: 'Goal → small PRs', icon: '+', action: () => Planner.open() },

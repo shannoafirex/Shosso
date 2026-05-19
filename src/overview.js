@@ -90,6 +90,13 @@ window.Overview = {
           </div>
 
           <div class="border-t border-border pt-3">
+            <button id="ov-health" class="w-full text-left px-3 py-2 rounded bg-panel2 hover:bg-border flex items-center justify-between">
+              <span class="text-sm font-medium">🩺 Workspace health check</span>
+              <span class="text-xs text-muted">Audit accionable →</span>
+            </button>
+          </div>
+
+          <div class="border-t border-border pt-3">
             <h4 class="font-semibold text-sm mb-2">Calculadora de coste</h4>
             <p class="text-xs text-muted mb-2">Compara con alternativas humanas mencionadas en los podcasts.</p>
             <div class="grid grid-cols-2 gap-2 text-xs">
@@ -136,6 +143,10 @@ window.Overview = {
     modal.querySelectorAll('#ov-sub, #ov-hours, #ov-rate, #ov-cases')
       .forEach(i => i.addEventListener('input', recompute));
     recompute();
+
+    // Wire health check button
+    const healthBtn = modal.querySelector('#ov-health');
+    if (healthBtn) healthBtn.onclick = () => { close(); Health.open(); };
   },
 
   _statCard(label, value, color) {
