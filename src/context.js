@@ -1,136 +1,115 @@
-// Visualización del contexto.
-
+// Real context tracking. Holds the running conversation and surfaces
+// usage data from the API (input/output tokens, cache hits when present).
 window.Context = {
-  logEntries: [],
-  conversationTokens: 0,
-  agentMdTokens: 0,
+  conversation: [], // [{ role, content }] in Anthropic format. 'content' can be string or blocks array.
+  lastUsage: null,
+  totalInputTokens: 0,
+  totalOutputTokens: 0,
+  cacheReadTokens: 0,
+  modelLimit: 200_000,
 
   init() {
-    document.getElementById('cfg-load-agentmd').addEventListener('change', (e) => {
-      this.log(`agent.md ${e.target.checked ? 'ACTIVADO (suma ' + this.agentMdTokens + 't en CADA turno)' : 'desactivado'}`);
-      SystemPromptView.refresh();
-      this.refresh();
-    });
-  },
-
-  addConversationTokens(t) {
-    this.conversationTokens += t;
+    document.getElementById('ctx-compact')?.addEventListener('click', () => Compaction.run());
+    document.getElementById('ctx-clear')?.addEventListener('click', () => this.reset());
     this.refresh();
   },
 
   reset() {
-    this.conversationTokens = 0;
-    this.logEntries = [];
+    this.conversation = [];
+    this.lastUsage = null;
+    this.totalInputTokens = 0;
+    this.totalOutputTokens = 0;
+    this.cacheReadTokens = 0;
     this.refresh();
-    this.renderLogs();
+    const log = document.getElementById('chat-log');
+    if (log) log.innerHTML = '';
   },
 
-  log(msg) {
-    const stamp = new Date().toLocaleTimeString();
-    this.logEntries.unshift(`[${stamp}] ${msg}`);
-    this.renderLogs();
+  push(message) {
+    this.conversation.push(message);
   },
 
-  renderLogs() {
-    const el = document.getElementById('ctx-logs');
-    if (!el) return;
-    el.innerHTML = this.logEntries.length === 0
-      ? '<div class="text-muted">Sin eventos. Carga una skill o habla con el agente para ver el flujo de contexto.</div>'
-      : this.logEntries.map(e => `<div>${escapeHtml(e)}</div>`).join('');
+  setUsage(usage) {
+    if (!usage) return;
+    this.lastUsage = usage;
+    if (typeof usage.input_tokens === 'number') {
+      this.totalInputTokens += usage.input_tokens;
+      this.totalOutputTokens += usage.output_tokens || 0;
+      if (usage.cache_read_input_tokens) this.cacheReadTokens += usage.cache_read_input_tokens;
+    } else if (typeof usage.prompt_tokens === 'number') {
+      this.totalInputTokens += usage.prompt_tokens;
+      this.totalOutputTokens += usage.completion_tokens || 0;
+    }
+    this.refresh();
   },
 
-  breakdown() {
-    const skillMeta = SkillsStore.metadataTokens();
-    const skillBodies = SkillsStore.loadedBodiesTokens();
-    const agentMdOn = document.getElementById('cfg-load-agentmd')?.checked;
-    return [
-      { label: 'System prompt', tokens: window.SYSTEM_PROMPT_TOKENS, color: '#22d3ee' },
-      { label: 'Tools / harness', tokens: window.HARNESS_TOOLS_TOKENS, color: '#0ea5e9' },
-      { label: 'agent.md', tokens: agentMdOn ? this.agentMdTokens : 0, color: '#f59e0b' },
-      { label: 'Skills (name+desc)', tokens: skillMeta, color: '#7c5cff' },
-      { label: 'Skills (cuerpo cargado)', tokens: skillBodies, color: '#a78bfa' },
-      { label: 'Conversación', tokens: this.conversationTokens, color: '#22c55e' },
-    ];
-  },
-
-  total() {
-    return this.breakdown().reduce((s, r) => s + r.tokens, 0);
+  // Estimate of what the next request will cost (input tokens). Used for the bar.
+  estimateNextInput() {
+    let t = 0;
+    const sp = document.getElementById('system-prompt')?.value || '';
+    t += estimateTokens(sp);
+    for (const m of this.conversation) {
+      if (typeof m.content === 'string') t += estimateTokens(m.content);
+      else if (Array.isArray(m.content)) for (const b of m.content) t += estimateTokens(b);
+    }
+    return t;
   },
 
   refresh() {
-    const parts = this.breakdown();
-    const total = parts.reduce((s, r) => s + r.tokens, 0);
-    const pct = Math.min(100, (total / window.CTX_LIMIT) * 100);
+    const settings = window._settings || {};
+    const provider = settings.provider || 'anthropic';
+    const limit = provider === 'openai' ? 128_000 : 200_000;
+    this.modelLimit = limit;
+    const est = this.estimateNextInput();
+    const pct = Math.min(100, (est / limit) * 100);
 
-    document.getElementById('ctx-bar').style.width = pct + '%';
-    document.getElementById('ctx-numbers').textContent =
-      `${formatTokens(total)} / ${formatTokens(window.CTX_LIMIT)}`;
-    document.getElementById('status-right').textContent = `tokens: ${formatTokens(total)}`;
+    const bar = document.getElementById('ctx-bar');
+    const nums = document.getElementById('ctx-numbers');
+    if (bar) bar.style.width = pct + '%';
+    if (nums) nums.textContent = `${formatTokens(est)} / ${formatTokens(limit)}`;
 
-    // Densidad de información en el status bar para power users
-    const loaded = SkillsStore.skills.filter(s => s.loaded).length;
-    const totalSkills = SkillsStore.skills.length;
-    const subs = AgentsStore.agents.filter(a => a.type === 'sub').length;
-    const mem = MemoryStore.items.length;
-    const openDiag = window.Diagnostics ? Diagnostics.failures.filter(f => !f.resolved).length : 0;
-    const show = (id, val, formatter) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      if (val > 0 || (id === 'status-skills' && totalSkills > 0)) {
-        el.classList.remove('hidden');
-        el.textContent = formatter(val);
-      } else el.classList.add('hidden');
-    };
-    show('status-skills', loaded, v => `⌗ ${v}/${totalSkills}`);
-    show('status-agents', subs, v => `▼ ${v}`);
-    show('status-memory', mem, v => `🧠 ${v}`);
-    show('status-diag', openDiag, v => `⚠ ${v}`);
-    const diagEl = document.getElementById('status-diag');
-    if (diagEl && openDiag > 0) diagEl.classList.add('text-warn');
-
-    const panel = document.getElementById('ctx-breakdown');
-    if (panel) {
-      panel.innerHTML = `
-        <div class="ctx-bar mb-2">
-          ${parts.map(p => `<span style="width:${(p.tokens/window.CTX_LIMIT)*100}%; background:${p.color}"></span>`).join('')}
-        </div>
-        ${parts.map(p => `
-          <div class="ctx-row">
-            <span class="label"><span class="dot" style="background:${p.color}"></span>${p.label}</span>
-            <span class="val">${formatTokens(p.tokens)}</span>
-          </div>`).join('')}
-        <div class="ctx-row mt-2 pt-2 border-t border-border">
-          <span class="label font-semibold text-gray-200">Total</span>
-          <span class="val font-semibold text-gray-200">${formatTokens(total)} (${pct.toFixed(1)}%)</span>
-        </div>
-      `;
-    }
+    const out = document.getElementById('status-tokens');
+    if (out) out.textContent = `in: ${formatTokens(this.totalInputTokens)} · out: ${formatTokens(this.totalOutputTokens)}${this.cacheReadTokens ? ' · cache: ' + formatTokens(this.cacheReadTokens) : ''}`;
 
     const left = document.getElementById('status-left');
-    if (pct > 90) {
-      left.textContent = '⚠⚠ Contexto al ' + pct.toFixed(0) + '%: el modelo está degradado';
-      left.className = 'text-danger';
-    } else if (pct > 80) {
-      left.textContent = '⚠ Contexto al ' + pct.toFixed(0) + '%: empieza la degradación';
-      left.className = 'text-warn';
-    } else if (pct > 60) {
-      left.textContent = '· Contexto al ' + pct.toFixed(0) + '%';
-      left.className = 'text-muted';
-    } else {
-      left.textContent = 'Listo';
-      left.className = 'text-muted';
+    if (left) {
+      if (pct > 90) { left.textContent = `⚠⚠ Contexto al ${pct.toFixed(0)}%`; left.className = 'text-danger'; }
+      else if (pct > 80) { left.textContent = `⚠ Contexto al ${pct.toFixed(0)}%`; left.className = 'text-warn'; }
+      else { left.textContent = 'Listo'; left.className = 'text-muted'; }
     }
 
-    if (window.Compaction) Compaction.evaluate();
-    if (window.Overview) Overview.refresh();
+    const wrap = document.getElementById('ctx-breakdown');
+    if (wrap) {
+      const sp = estimateTokens(document.getElementById('system-prompt')?.value || '');
+      const msgs = this.conversation.length;
+      let convoTok = 0;
+      for (const m of this.conversation) {
+        if (typeof m.content === 'string') convoTok += estimateTokens(m.content);
+        else if (Array.isArray(m.content)) for (const b of m.content) convoTok += estimateTokens(b);
+      }
+      const rows = [
+        ['System prompt', sp, '#22d3ee'],
+        ['Tools (defs)', estimateTokens(JSON.stringify(Tools.defs)), '#0ea5e9'],
+        [`Conversación (${msgs} msgs)`, convoTok, '#22c55e']
+      ];
+      wrap.innerHTML = rows.map(([label, t, color]) => `
+        <div class="flex justify-between items-center">
+          <span class="flex items-center gap-1.5"><span class="inline-block w-2 h-2 rounded-full" style="background:${color}"></span>${label}</span>
+          <span class="font-mono">${formatTokens(t)}</span>
+        </div>
+      `).join('') + `
+        <div class="flex justify-between mt-2 pt-2 border-t border-border font-semibold">
+          <span>Total estimado (próximo turno)</span>
+          <span class="font-mono">${formatTokens(est)}</span>
+        </div>
+        ${this.lastUsage ? `
+          <div class="mt-2 pt-2 border-t border-border text-[10px] text-muted">
+            <div class="text-success font-semibold mb-0.5">Último turno (real, API):</div>
+            <div>input: ${this.lastUsage.input_tokens ?? this.lastUsage.prompt_tokens ?? '?'}</div>
+            <div>output: ${this.lastUsage.output_tokens ?? this.lastUsage.completion_tokens ?? '?'}</div>
+            ${this.lastUsage.cache_read_input_tokens ? `<div>cache read: ${this.lastUsage.cache_read_input_tokens}</div>` : ''}
+          </div>` : ''}
+      `;
+    }
   }
 };
-
-function formatTokens(n) {
-  // Defensive: si por algún flujo n es NaN o no-numeric, devuelve "0"
-  // en vez de mostrar "NaN" visible al usuario.
-  if (typeof n !== 'number' || isNaN(n) || !isFinite(n)) return '0';
-  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k';
-  return String(Math.round(n));
-}
-window.formatTokens = formatTokens;

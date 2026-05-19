@@ -1,158 +1,103 @@
-// Gestión de skills: render, carga progresiva (progressive disclosure),
-// y cálculo de su huella en el contexto.
+// Skills = reusable prompt fragments, stored as `.shosso/skills/*.md`
+// inside the user's project folder. When the user invokes a skill (or
+// when its tags match the message), the body is injected into the next
+// turn as a system note. No simulation: real files on disk.
 
 window.SkillsStore = {
-  skills: [],
-
-  init() {
-    const saved = SafeStorage.safeGet('shosso.skills', null);
-    this.skills = Array.isArray(saved) ? saved : structuredClone(window.SEED_SKILLS);
-    this.persist();
-  },
-
-  persist() {
-    SafeStorage.safeSet('shosso.skills', this.skills);
-  },
-
-  add(skill) {
-    this.skills.push(skill);
-    this.persist();
-    this.render();
-    Context.refresh();
-  },
-
-  remove(id) {
-    this.skills = this.skills.filter(s => s.id !== id);
-    this.persist();
-    this.render();
-    // Cascade cleanup: limpia referencias muertas en sub-agentes para
-    // evitar Workshop columns y dispatcher con skill ID inexistente.
-    if (window.AgentsStore) {
-      let touched = false;
-      for (const a of AgentsStore.agents) {
-        if (a.skills && a.skills.includes(id)) {
-          a.skills = a.skills.filter(sid => sid !== id);
-          touched = true;
-        }
-      }
-      if (touched) {
-        AgentsStore.persist();
-        AgentsStore.render();
-        if (window.Workshop) Workshop.render();
-      }
-    }
-    Context.refresh();
-  },
-
-  get(id) { return this.skills.find(s => s.id === id); },
-
-  // Carga progresiva: sólo el body cuenta como tokens "cargados".
-  toggleLoaded(id) {
-    const s = this.get(id);
-    if (!s) return;
-    s.loaded = !s.loaded;
-    s.expandOnRender = s.loaded; // auto-expandir al cargar para que se VEA qué entró
-    this.persist();
-    this.render();
-    Context.refresh();
-    Context.log(`Skill "${s.name}" ${s.loaded ? 'CARGADA' : 'descargada'} (${s.loaded ? `+${estimateTokens(s.body)}` : `-${estimateTokens(s.body)}`} tokens en contexto)`);
-  },
-
-  // Tokens "permanentes" en contexto: nombre + descripción de cada skill.
-  metadataTokens() {
-    return this.skills.reduce((sum, s) =>
-      sum + estimateTokens(`${s.name}: ${s.description}`), 0);
-  },
-
-  // Tokens de bodies actualmente cargados.
-  loadedBodiesTokens() {
-    return this.skills
-      .filter(s => s.loaded)
-      .reduce((sum, s) => sum + estimateTokens(s.body), 0);
-  },
-
+  skills: [], // { id, name, description, body, path }
   filter: '',
-  tagFilter: 'all',
+
+  async init() {
+    document.addEventListener('shosso:rootChanged', () => this.reload());
+    await this.reload();
+  },
+
+  async reload() {
+    this.skills = [];
+    if (!Projects.root) { this.render(); return; }
+    const dir = Projects.root + '/.shosso/skills';
+    const r = await window.shosso.fs.readDir(dir);
+    if (!Array.isArray(r)) { this.render(); return; } // not created yet
+    for (const e of r) {
+      if (e.isDir || !e.name.endsWith('.md')) continue;
+      const file = await window.shosso.fs.readFile(e.path);
+      if (file.error) continue;
+      this.skills.push(this._parse(e.path, file.content));
+    }
+    this.render();
+  },
+
+  _parse(filePath, content) {
+    // Frontmatter: --- name / description --- body
+    const m = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
+    let name = filePath.split(/[/\\]/).pop().replace(/\.md$/, '');
+    let description = '';
+    let body = content;
+    if (m) {
+      for (const line of m[1].split('\n')) {
+        const [k, ...rest] = line.split(':');
+        const v = rest.join(':').trim();
+        if (k.trim().toLowerCase() === 'name') name = v;
+        if (k.trim().toLowerCase() === 'description') description = v;
+      }
+      body = m[2];
+    }
+    return { id: filePath, name, description, body, path: filePath };
+  },
+
+  async add() {
+    if (!Projects.root) return alert('Abre una carpeta primero.');
+    const name = prompt('Nombre de la skill (slug, p.ej. "weekly-report"):');
+    if (!name) return;
+    const safe = name.replace(/[^a-zA-Z0-9_.-]/g, '-').toLowerCase();
+    const description = prompt('Descripción corta (qué hace):') || '';
+    const body = '# ' + name + '\n\nEscribe aquí los pasos / el prompt que reutilizas.\n';
+    const path = Projects.root + '/.shosso/skills/' + safe + '.md';
+    const content = `---\nname: ${name}\ndescription: ${description}\n---\n\n${body}`;
+    await window.shosso.fs.writeFile(path, content);
+    await this.reload();
+    // Open it in the editor
+    if (window.Editor) Editor.openPath(path);
+  },
 
   render() {
     const ul = document.getElementById('skills-list');
     if (!ul) return;
-    // Renderiza chips de tags arriba (si hay tags)
-    this._renderTagChips();
     let list = this.skills;
     if (this.filter) {
       const q = this.filter.toLowerCase();
-      list = list.filter(s =>
-        s.name.toLowerCase().includes(q) ||
-        (s.description || '').toLowerCase().includes(q));
+      list = list.filter(s => s.name.toLowerCase().includes(q) || (s.description || '').toLowerCase().includes(q));
     }
-    if (this.tagFilter !== 'all') {
-      list = list.filter(s => (s.tags || []).includes(this.tagFilter));
-    }
-    ul.innerHTML = '';
     if (list.length === 0) {
-      ul.innerHTML = this.filter
-        ? `<li class="text-xs text-muted">Sin resultados para "${escapeHtml(this.filter)}".</li>`
-        : '<li class="text-xs text-muted">Aún no tienes skills. Construye uno desde un workflow real, no lo descargues de internet.</li>';
+      ul.innerHTML = `<li class="text-[11px] text-muted">${Projects.root ? 'Sin skills en <code>.shosso/skills/</code>. + para crear.' : 'Abre una carpeta para ver/crear skills.'}</li>`;
       return;
     }
-    for (const s of list) {
-      const li = document.createElement('li');
-      li.className = 'skill-card' + (s.loaded ? ' loaded' : '') + (s.expandOnRender ? ' expanded' : '');
-      if (s.expandOnRender) s.expandOnRender = false;
-      const metaTok = estimateTokens(`${s.name}: ${s.description}`);
-      const bodyTok = estimateTokens(s.body);
-      li.innerHTML = `
-        <div class="name">
-          <span title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
-          <button class="text-xs text-muted hover:text-white" data-action="toggle-body">▾</button>
+    ul.innerHTML = list.map(s => `
+      <li class="skill-item p-1.5 rounded hover:bg-panel2 border border-transparent hover:border-border">
+        <div class="flex items-center justify-between gap-1">
+          <span class="font-medium text-[11px]">${escapeHtml(s.name)}</span>
+          <div class="flex gap-1">
+            <button data-act="edit" data-path="${escapeHtml(s.path)}" class="text-[10px] text-muted hover:text-accent2" title="Editar">✎</button>
+            <button data-act="invoke" data-path="${escapeHtml(s.path)}" class="text-[10px] text-accent2 hover:text-accent" title="Invocar">▶</button>
+          </div>
         </div>
-        <div class="desc">${escapeHtml(s.description)}</div>
-        <div class="meta">
-          <span class="pill">desc: ${metaTok}t</span>
-          <span class="pill ${s.loaded ? 'loaded' : ''}">body: ${bodyTok}t${s.loaded ? ' · cargada' : ''}</span>
-          <span class="pill">iter: ${s.iterations || 0}</span>
-        </div>
-        <div class="body">${escapeHtml(s.body)}</div>
-        <div class="actions">
-          <button data-action="load">${s.loaded ? 'Descargar' : 'Cargar'}</button>
-          <button data-action="invoke">Invocar</button>
-          <button data-action="delete">Borrar</button>
-        </div>`;
-      li.querySelector('[data-action="toggle-body"]').onclick = (e) => {
-        e.stopPropagation();
-        li.classList.toggle('expanded');
+        <div class="text-[10px] text-muted leading-tight">${escapeHtml(s.description || '—')}</div>
+      </li>
+    `).join('');
+    ul.querySelectorAll('button[data-act]').forEach(b => {
+      const path = b.dataset.path;
+      const skill = this.skills.find(s => s.path === path);
+      b.onclick = () => {
+        if (b.dataset.act === 'edit') Editor.openPath(path);
+        if (b.dataset.act === 'invoke') Agent.invokeSkill(skill);
       };
-      li.querySelector('[data-action="load"]').onclick = () => this.toggleLoaded(s.id);
-      li.querySelector('[data-action="invoke"]').onclick = () => MockAgent.invokeSkill(s.id);
-      li.querySelector('[data-action="delete"]').onclick = () => {
-        if (confirm(`¿Borrar skill "${s.name}"?`)) this.remove(s.id);
-      };
-      ul.appendChild(li);
-    }
+    });
   },
 
-  _renderTagChips() {
-    const wrap = document.getElementById('skills-tags');
-    if (!wrap) return;
-    const allTags = new Set();
-    for (const s of this.skills) (s.tags || []).forEach(t => allTags.add(t));
-    if (allTags.size === 0) { wrap.innerHTML = ''; return; }
-    const tags = ['all', ...[...allTags].sort()];
-    wrap.innerHTML = tags.map(t => {
-      const active = t === this.tagFilter;
-      const cls = active ? 'bg-accent text-white' : 'bg-panel2 text-muted hover:bg-border';
-      return `<button data-tag="${escapeHtml(t)}" class="text-[10px] px-2 py-0.5 rounded ${cls}">${escapeHtml(t)}</button>`;
-    }).join('');
-    wrap.querySelectorAll('button[data-tag]').forEach(b => {
-      b.onclick = () => { this.tagFilter = b.dataset.tag; this.render(); };
-    });
+  // Used by Agent: scan the user's message for skill name mentions and
+  // return any that match. Body gets injected into the system prompt.
+  matchByMention(text) {
+    const t = text.toLowerCase();
+    return this.skills.filter(s => t.includes(s.name.toLowerCase()));
   }
 };
-
-function escapeHtml(str) {
-  return String(str || '').replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
-}
-window.escapeHtml = escapeHtml;

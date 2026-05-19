@@ -1,15 +1,17 @@
-// Aproximador de tokens. No es exacto (no es BPE real), pero es consistente
-// y suficiente para visualizar la diferencia entre cargar el body de una
-// skill vs. sólo su nombre + descripción.
+// Estimador char/4. Suficiente para previews relativos.
+// Los tokens REALES del run vienen en `usage` del API y se muestran aparte.
 window.estimateTokens = function (text) {
-  if (!text) return 0;
-  // Heurística estándar: ~4 chars por token en inglés/español promedio.
-  return Math.max(1, Math.ceil(text.length / 4));
+  if (text == null) return 0;
+  const s = typeof text === 'string' ? text : JSON.stringify(text);
+  return Math.ceil(s.length / 4);
 };
-
-// Presupuesto de contexto del modelo (simulado).
-window.CTX_LIMIT = 200_000;
-
-// Tamaño del system prompt y harness (fijo, simulado).
-window.SYSTEM_PROMPT_TOKENS = 4200;
-window.HARNESS_TOOLS_TOKENS = 1800;
+window.formatTokens = function (n) {
+  if (typeof n !== 'number' || !isFinite(n)) return '0';
+  if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k';
+  return String(Math.round(n));
+};
+window.escapeHtml = function (str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+};

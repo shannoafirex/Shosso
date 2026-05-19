@@ -3,25 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https://cdn.tailwindcss.com https://cdn.jsdelivr.net; img-src 'self' data:;" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https://cdn.tailwindcss.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self' https://api.anthropic.com https://api.openai.com;" />
   <title>Shosso</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css" />
   <link rel="stylesheet" href="src/styles.css" />
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            bg: '#0b0e14',
-            panel: '#11151c',
-            panel2: '#161b22',
-            border: '#222831',
-            accent: '#7c5cff',
-            accent2: '#22d3ee',
-            success: '#22c55e',
-            warn: '#f59e0b',
-            danger: '#ef4444',
-            muted: '#8a93a6'
+            bg: '#0b0e14', panel: '#11151c', panel2: '#161b22',
+            border: '#222831', accent: '#7c5cff', accent2: '#22d3ee',
+            success: '#22c55e', warn: '#f59e0b', danger: '#ef4444', muted: '#8a93a6'
           }
         }
       }
@@ -34,56 +28,74 @@
     <div class="flex items-center gap-3">
       <div class="w-7 h-7 rounded-md bg-gradient-to-br from-accent to-accent2 flex items-center justify-center font-bold text-sm">S</div>
       <h1 class="font-semibold tracking-tight">Shosso</h1>
-      <span class="text-xs text-muted hidden md:inline" data-i18n="tagline">IDE nativo de skills · context-aware</span>
-      <span id="model-pill" class="hidden md:inline text-[10px] uppercase tracking-wider bg-success/15 text-success px-2 py-0.5 rounded-full" data-i18n="model.good">modelo: bueno</span>
-      <button id="project-pill" class="hidden md:inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-panel2 hover:bg-border" title="Cambiar de proyecto"></button>
-      <span id="motto" class="hidden lg:inline text-[11px] text-accent2 italic transition-opacity duration-300 max-w-xs truncate"></span>
+      <button id="folder-pill" class="text-xs px-2 py-0.5 rounded bg-panel2 hover:bg-border" title="Carpeta actual">— sin carpeta —</button>
+      <span id="branch-pill" class="hidden text-[10px] px-2 py-0.5 rounded-full bg-accent/15 text-accent font-mono"></span>
+      <span id="provider-pill" class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-panel2"></span>
     </div>
-    <div class="flex items-center gap-4">
-      <select id="lang-switch" class="bg-panel2 border border-border rounded text-[10px] px-1 py-0.5 outline-none" title="Idioma · Language">
-        <option value="es">ES</option>
-        <option value="en">EN</option>
-      </select>
-      <div id="productivity-pill" class="hidden sm:flex items-center gap-2 text-xs">
-        <span class="text-muted" data-i18n="productivity">Productividad</span>
-        <span id="productivity-score" class="font-mono px-2 py-0.5 rounded bg-panel2">—</span>
-      </div>
+    <div class="flex items-center gap-3">
       <div class="hidden sm:flex flex-col text-xs">
         <div class="flex items-center justify-between gap-3">
           <span class="text-muted">Contexto</span>
-          <span id="ctx-numbers" class="font-mono">0 / 200k</span>
+          <span id="ctx-numbers" class="font-mono">0 / —</span>
         </div>
         <div class="w-56 h-1.5 bg-panel2 rounded-full overflow-hidden mt-1">
           <div id="ctx-bar" class="h-full bg-gradient-to-r from-accent to-accent2 transition-all" style="width:0%"></div>
         </div>
       </div>
-      <button id="btn-archetype" class="text-xs px-2 py-1 rounded bg-accent/15 text-accent hover:bg-accent/25" title="¿Qué estás construyendo? — pre-popula el workspace">✦ Archetype</button>
-      <button id="btn-import" class="text-xs px-2 py-1 rounded bg-panel2 hover:bg-border" title="Importar workspace JSON">↘ Import</button>
-      <button id="btn-export" class="text-xs px-2 py-1 rounded bg-panel2 hover:bg-border" title="Export workspace snapshot (markdown/JSON)">↗ Export</button>
-      <button id="btn-demo" class="text-xs px-2 py-1 rounded bg-accent2/20 text-accent2 hover:bg-accent2/30" title="Modo demo (scripted, mira sin teclear)">Demo</button>
-      <button id="btn-tutorial" class="text-xs px-2 py-1 rounded bg-accent/20 text-accent hover:bg-accent/30" title="Onboarding rundown">Tour</button>
-      <button id="btn-reset" class="text-xs px-2 py-1 rounded bg-panel2 hover:bg-border" title="Resetea la sesión">Reset</button>
+      <button id="btn-settings" class="text-xs px-2 py-1 rounded bg-accent/15 text-accent hover:bg-accent/25" title="Ajustes (Cmd/Ctrl+,)">⚙ Ajustes</button>
+      <button id="btn-open-folder" class="text-xs px-2 py-1 rounded bg-panel2 hover:bg-border" title="Abrir carpeta (Cmd/Ctrl+O)">📁 Carpeta</button>
     </div>
   </header>
 
   <!-- Main layout -->
   <main class="grid grid-cols-12 h-[calc(100vh-3rem-1.75rem)]">
-    <!-- Left: File explorer + templates -->
-    <aside class="col-span-2 border-r border-border bg-panel overflow-y-auto flex flex-col">
-      <div class="px-3 py-2 text-xs uppercase tracking-wider text-muted flex justify-between items-center">
-        <span>Archivos</span>
-        <div class="flex gap-2">
-          <button id="btn-open-folder" class="hover:text-accent2" title="Abrir carpeta">⌂</button>
-          <button id="btn-new-file" class="hover:text-accent2" title="Nuevo archivo">+</button>
+    <!-- Left: File explorer + git + skills tabs -->
+    <aside class="col-span-2 border-r border-border bg-panel flex flex-col">
+      <nav class="flex border-b border-border text-[10px] uppercase tracking-wider">
+        <button data-leftTab="files" class="left-tab flex-1 px-2 py-1.5 bg-panel2">Archivos</button>
+        <button data-leftTab="git" class="left-tab flex-1 px-2 py-1.5">Git</button>
+        <button data-leftTab="skills" class="left-tab flex-1 px-2 py-1.5">Skills</button>
+      </nav>
+      <div class="flex-1 overflow-y-auto">
+        <div data-leftPanel="files" class="left-panel h-full">
+          <div class="px-2 py-1.5 text-[10px] text-muted flex justify-between items-center">
+            <span id="file-tree-root" class="truncate">sin carpeta</span>
+            <div class="flex gap-2">
+              <button id="ft-new-file" class="hover:text-accent2" title="Nuevo archivo">＋</button>
+              <button id="ft-refresh" class="hover:text-accent2" title="Refrescar">↻</button>
+            </div>
+          </div>
+          <ul id="file-tree" class="text-sm"></ul>
         </div>
-      </div>
-      <ul id="file-tree" class="text-sm flex-1"></ul>
-      <div class="border-t border-border px-3 py-2">
-        <div class="text-xs uppercase tracking-wider text-muted flex justify-between items-center mb-1">
-          <span>Templates</span>
-          <button id="btn-template-info" class="text-muted hover:text-accent2" title="Por qué los templates están volviendo">?</button>
+        <div data-leftPanel="git" class="left-panel hidden p-2 text-xs space-y-2">
+          <div id="git-summary" class="text-muted">Sin repositorio</div>
+          <div id="git-files" class="space-y-1"></div>
+          <div class="pt-2 border-t border-border space-y-1">
+            <textarea id="git-msg" rows="2" placeholder="Mensaje de commit"
+              class="w-full bg-panel2 border border-border rounded p-1.5 text-[11px] outline-none focus:border-accent"></textarea>
+            <button id="git-commit-btn" class="w-full text-[11px] px-2 py-1 rounded bg-accent hover:bg-accent/80 text-white">Commit</button>
+          </div>
+          <details class="pt-2 border-t border-border">
+            <summary class="cursor-pointer text-[10px] text-muted">Log (últimos 20)</summary>
+            <div id="git-log" class="mt-1 font-mono text-[10px] space-y-0.5"></div>
+          </details>
         </div>
-        <ul id="template-list" class="text-xs space-y-1"></ul>
+        <div data-leftPanel="skills" class="left-panel hidden p-2 text-xs space-y-2">
+          <p class="text-[10px] text-muted leading-snug">Skills = prompts reutilizables en <code>.shosso/skills/</code>. El agente las inyecta cuando le son útiles (progressive disclosure).</p>
+          <div class="flex gap-1">
+            <input id="skill-filter" placeholder="filtrar…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-[11px] outline-none focus:border-accent" />
+            <button id="skill-new" class="text-[11px] px-2 rounded bg-accent/20 text-accent hover:bg-accent/30">＋</button>
+          </div>
+          <ul id="skills-list" class="space-y-1"></ul>
+          <div class="pt-2 border-t border-border">
+            <p class="text-[10px] text-muted">Memoria persistente (hechos):</p>
+            <ul id="memory-list" class="space-y-0.5 mt-1"></ul>
+            <form id="memory-form" class="flex gap-1 mt-1">
+              <input id="memory-input" placeholder="hecho persistente…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-[11px] outline-none focus:border-accent" />
+              <button class="text-[11px] px-2 rounded bg-accent/20 text-accent">＋</button>
+            </form>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -91,217 +103,66 @@
     <section class="col-span-7 flex flex-col">
       <div id="tabs" class="flex items-center bg-panel border-b border-border h-9 px-1 overflow-x-auto"></div>
       <div id="editor" class="flex-1"></div>
-      <div class="h-52 border-t border-border bg-panel">
+      <div class="h-60 border-t border-border bg-panel flex flex-col">
         <div class="flex items-center border-b border-border">
-          <button data-tab="chat" class="bottom-tab px-3 py-1.5 text-xs border-r border-border bg-panel2" data-i18n="bottom.chat">Chat con el agente</button>
-          <button data-tab="terminal" class="bottom-tab px-3 py-1.5 text-xs border-r border-border" data-i18n="bottom.terminal">Terminal (mock)</button>
-          <button data-tab="logs" class="bottom-tab px-3 py-1.5 text-xs border-r border-border" data-i18n="bottom.logs">Logs de contexto</button>
-          <button data-tab="diagnostics" class="bottom-tab px-3 py-1.5 text-xs border-r border-border" data-i18n="bottom.diagnostics">Diagnóstico de fallos</button>
-          <button data-tab="workshop" class="bottom-tab px-3 py-1.5 text-xs border-r border-border" data-i18n="bottom.workshop">Workshop (paralelo)</button>
-          <span id="compaction-badge" class="hidden ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-warn/20 text-warn animate-pulse">⚠ compactación cerca</span>
+          <button data-tab="chat" class="bottom-tab px-3 py-1.5 text-xs border-r border-border bg-panel2">Chat (agente)</button>
+          <button data-tab="terminal" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Terminal</button>
+          <button data-tab="logs" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Logs agente</button>
+          <span id="run-status" class="hidden ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-accent/20 text-accent"></span>
         </div>
-        <div id="bottom-panels" class="h-[calc(100%-2rem)]">
+        <div id="bottom-panels" class="flex-1 overflow-hidden">
           <div data-panel="chat" class="bottom-panel h-full flex flex-col">
-            <div id="chat-log" class="flex-1 overflow-y-auto p-3 space-y-2 text-sm flex flex-col"></div>
+            <div id="chat-log" class="flex-1 overflow-y-auto p-3 space-y-2 text-sm"></div>
             <form id="chat-form" class="flex items-center border-t border-border">
-              <input id="chat-input" type="text" placeholder="Pídele algo al agente… (ej: 'genera reporte semanal', 'investiga este patrocinador')" data-i18n="chat.placeholder" class="flex-1 bg-transparent px-3 py-2 text-sm outline-none" autocomplete="off" />
-              <button class="px-3 text-xs text-accent2 hover:text-white" data-i18n="send">Enviar</button>
+              <input id="chat-input" type="text" placeholder="Pídele algo al agente… (lee/escribe ficheros, corre comandos, busca en el código)"
+                class="flex-1 bg-transparent px-3 py-2 text-sm outline-none" autocomplete="off" />
+              <button id="chat-stop" type="button" class="hidden px-3 text-xs text-danger hover:text-white">Detener</button>
+              <button class="px-3 text-xs text-accent2 hover:text-white">Enviar</button>
             </form>
           </div>
-          <div data-panel="terminal" class="bottom-panel hidden h-full flex flex-col" id="terminal-wrap">
-            <div id="terminal" class="flex-1 p-3 font-mono text-xs overflow-y-auto">
-              <div class="text-muted">$ shosso --version</div>
-              <div>Shosso 0.1.0 (Electron)</div>
-              <div class="text-muted mt-1">Comandos: opensource &lt;repo&gt;, ls, clear, help</div>
-              <div class="text-muted mt-2">$ ls skills/</div>
-              <div id="terminal-skills"></div>
-              <div id="terminal-output" class="mt-2"></div>
-            </div>
-            <form id="terminal-form" class="flex border-t border-border">
-              <span class="px-2 py-1.5 text-xs font-mono text-accent2">$</span>
-              <input id="terminal-input" type="text" placeholder="opensource browser-use" autocomplete="off"
-                class="flex-1 bg-transparent text-xs font-mono outline-none py-1.5 pr-2" />
-            </form>
+          <div data-panel="terminal" class="bottom-panel hidden h-full">
+            <div id="terminal" class="h-full"></div>
           </div>
-          <div data-panel="logs" class="bottom-panel hidden h-full p-3 font-mono text-xs overflow-y-auto" id="ctx-logs"></div>
-          <div data-panel="diagnostics" class="bottom-panel hidden h-full p-3 overflow-y-auto" id="diagnostics-panel"></div>
-          <div data-panel="workshop" class="bottom-panel hidden h-full flex flex-col">
-            <div class="flex items-center justify-between px-3 py-1.5 border-b border-border">
-              <span class="text-xs text-muted">Sub-agentes en paralelo · cada columna es un thread independiente</span>
-              <button id="btn-clear-workshop" class="text-[10px] px-2 py-0.5 rounded bg-panel2 hover:bg-border">Limpiar</button>
-            </div>
-            <div id="workshop-grid" class="flex-1 overflow-auto p-2 gap-2 grid"></div>
-          </div>
+          <div data-panel="logs" class="bottom-panel hidden h-full p-3 font-mono text-[11px] overflow-y-auto" id="agent-logs"></div>
         </div>
       </div>
     </section>
 
-    <!-- Right: Skills / Agents / Context / Tokenizer / System / Memory -->
+    <!-- Right: System prompt + tokenizer + memory inspector -->
     <aside class="col-span-3 border-l border-border bg-panel flex flex-col">
-      <nav class="flex border-b border-border overflow-x-auto whitespace-nowrap">
-        <button data-tab="skills" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide bg-panel2" data-i18n="tab.skills">Skills</button>
-        <button data-tab="agents" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.agents">Agentes</button>
-        <button data-tab="plan" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.plan">Plan</button>
-        <button data-tab="context" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.context">Contexto</button>
-        <button data-tab="memory" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.memory">Memoria</button>
-        <button data-tab="tokenizer" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.tokenizer">Tokens</button>
-        <button data-tab="system" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.system">Sistema</button>
-        <button data-tab="security" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.security">Seguridad</button>
-        <button data-tab="philosophy" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.philosophy">Filosofía</button>
+      <nav class="flex border-b border-border text-[10px] uppercase tracking-wider">
+        <button data-rightTab="system" class="right-tab flex-1 px-2 py-2 bg-panel2">Sistema</button>
+        <button data-rightTab="context" class="right-tab flex-1 px-2 py-2">Contexto</button>
+        <button data-rightTab="tokens" class="right-tab flex-1 px-2 py-2">Tokens</button>
       </nav>
       <div class="flex-1 overflow-y-auto">
-        <!-- Plan panel -->
-        <div data-panel="plan" class="side-panel hidden p-3 space-y-3">
-          <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-sm" data-i18n="panel.plan.title">Planes</h2>
-            <button id="btn-new-plan" class="text-xs px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30" data-i18n="new.plan">+ Plan</button>
-          </div>
-          <p class="text-xs text-muted leading-snug" data-i18n="panel.plan.desc">El plan es para TI — accountability. Después se divide en PRs pequeños que el review loop (<code>/grebloop</code>) puede cerrar.</p>
-          <div id="plans-list" class="space-y-2"></div>
+        <div data-rightPanel="system" class="right-panel p-3 space-y-3 text-xs">
+          <h2 class="font-semibold text-sm">System prompt</h2>
+          <p class="text-muted leading-snug">Va en cada turno. Edita y guarda — se aplica al siguiente mensaje del agente.</p>
+          <textarea id="system-prompt" rows="10" placeholder="Eres un agente que ayuda con código del usuario. Sé conciso." class="w-full bg-panel2 border border-border rounded p-2 font-mono text-[11px] outline-none focus:border-accent"></textarea>
+          <button id="system-save" class="text-[11px] px-2 py-1 rounded bg-accent/20 text-accent hover:bg-accent/30">Guardar</button>
           <div class="pt-3 border-t border-border">
-            <h3 class="text-xs uppercase tracking-wide text-muted mb-2">Comandos rápidos</h3>
-            <ul class="text-xs space-y-1">
-              <li><code class="text-accent2">/grebloop</code> — auto-review hasta 5/5</li>
-              <li><code class="text-accent2">/goal &lt;estado&gt;</code> — define end state al estilo Codex</li>
-              <li><code class="text-accent2">opensource &lt;repo&gt;</code> — clona código en el workspace (terminal)</li>
-              <li><code class="text-accent2">reference the codebase</code> — tag para inline en prompts</li>
-            </ul>
+            <h3 class="font-semibold">Tools activas</h3>
+            <ul id="tools-list" class="mt-1 space-y-0.5 font-mono text-[10px]"></ul>
           </div>
         </div>
-
-        <!-- Security panel -->
-        <div data-panel="security" class="side-panel hidden p-3">
-          <div id="security-panel-body"></div>
-        </div>
-
-        <div data-panel="skills" class="side-panel p-3 space-y-2">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="font-semibold text-sm" data-i18n="panel.skills.title">Skills disponibles</h2>
-            <div class="flex gap-1">
-              <button id="btn-new-skill" class="text-xs px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30" data-i18n="new.skill">+ Skill</button>
-              <button id="btn-import-skill" class="text-xs px-2 py-0.5 rounded bg-panel2 hover:bg-border" title="Importar skill externa">⤓</button>
-            </div>
+        <div data-rightPanel="context" class="right-panel hidden p-3 space-y-3 text-xs">
+          <h2 class="font-semibold text-sm">Conversación actual</h2>
+          <div id="ctx-breakdown" class="space-y-1"></div>
+          <div class="pt-3 border-t border-border space-y-2">
+            <button id="ctx-compact" class="w-full text-[11px] px-2 py-1 rounded bg-warn/20 text-warn hover:bg-warn/30">Compactar (LLM resume)</button>
+            <button id="ctx-clear" class="w-full text-[11px] px-2 py-1 rounded bg-panel2 hover:bg-border">Nuevo thread</button>
           </div>
-          <p class="text-xs text-muted leading-snug mb-2" data-i18n="panel.skills.desc">Solo nombre + descripción están en contexto. El cuerpo se carga cuando el agente lo necesita (progressive disclosure).</p>
-          <input id="skills-filter" type="text" placeholder="filtrar skills…"
-            class="w-full bg-panel2 border border-border rounded px-2 py-1 text-xs outline-none focus:border-accent mb-2" />
-          <div id="skills-tags" class="flex flex-wrap gap-1 mb-2"></div>
-          <ul id="skills-list" class="space-y-2"></ul>
+          <p class="text-[10px] text-muted leading-snug">Auto-compact al 80% (configurable en Ajustes).</p>
         </div>
-
-        <!-- Agents panel -->
-        <div data-panel="agents" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm" data-i18n="panel.agents.title">Orquesta de agentes</h2>
-          <p class="text-xs text-muted leading-snug" data-i18n="panel.agents.desc">Un agente principal; los sub-agentes solo aparecen cuando aportan productividad real.</p>
-          <ul id="agents-list" class="space-y-2"></ul>
-          <button id="btn-new-agent" class="w-full mt-2 text-xs px-2 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30">+ Sub-agente</button>
-          <div id="productivity-warning" class="hidden mt-3 p-2 rounded bg-warn/10 border border-warn/30 text-xs text-warn"></div>
-        </div>
-
-        <!-- Context panel -->
-        <div data-panel="context" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm" data-i18n="panel.context.title">Composición del contexto</h2>
-          <p class="text-xs text-muted leading-snug" data-i18n="panel.context.desc">Menos es más. Vigila lo que se inyecta en cada turno.</p>
-          <div id="ctx-breakdown" class="space-y-1.5"></div>
-          <div class="mt-3 pt-3 border-t border-border">
-            <h3 class="text-xs uppercase tracking-wide text-muted mb-2">Política</h3>
-            <label class="flex items-center justify-between text-xs">
-              <span>Cargar agent.md por defecto</span>
-              <input type="checkbox" id="cfg-load-agentmd" class="accent-accent" />
-            </label>
-            <p class="text-[11px] text-muted mt-1 leading-snug">Recomendado: desactivado. Sólo actívalo si tienes información propietaria que debe estar siempre presente.</p>
-            <label class="flex items-center justify-between text-xs mt-3">
-              <span>Auto-compactación al 80%</span>
-              <input type="checkbox" id="cfg-auto-compact" class="accent-accent" checked />
-            </label>
-            <p class="text-[11px] text-muted mt-1 leading-snug">Como hacen Claude Code y Codex: comprime la conversación antes de que el modelo se degrade.</p>
+        <div data-rightPanel="tokens" class="right-panel hidden p-3 space-y-2 text-xs">
+          <h2 class="font-semibold text-sm">Tokenizer</h2>
+          <textarea id="tk-input" rows="6" placeholder="Pega para medir…" class="w-full bg-panel2 border border-border rounded p-2 font-mono text-[11px] outline-none focus:border-accent"></textarea>
+          <div class="grid grid-cols-2 gap-2 text-center">
+            <div class="bg-panel2 p-2 rounded"><div class="text-[10px] text-muted">chars</div><div id="tk-chars" class="font-mono text-sm">0</div></div>
+            <div class="bg-panel2 p-2 rounded"><div class="text-[10px] text-muted">tokens (aprox)</div><div id="tk-tokens" class="font-mono text-sm text-accent">0</div></div>
           </div>
-        </div>
-
-        <!-- Memory panel -->
-        <div data-panel="memory" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm" data-i18n="panel.memory.title">Capa de memoria</h2>
-          <p class="text-xs text-muted leading-snug" data-i18n="panel.memory.desc">Hechos persistentes entre sesiones. NO viven en el contexto principal; se recuperan cuando son relevantes (igual que skills, progressive).</p>
-          <input id="memory-filter" type="text" placeholder="filtrar memoria…"
-            class="w-full bg-panel2 border border-border rounded px-2 py-1 text-xs outline-none focus:border-accent" />
-          <div id="memory-list" class="space-y-2"></div>
-          <form id="memory-form" class="flex gap-1 mt-2">
-            <input id="memory-input" placeholder="Anota un hecho persistente…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-xs outline-none focus:border-accent" />
-            <button class="text-xs px-2 py-1 rounded bg-accent/20 text-accent">+</button>
-          </form>
-        </div>
-
-        <!-- Tokenizer panel -->
-        <div data-panel="tokenizer" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm">Tokenizador</h2>
-          <p class="text-xs text-muted leading-snug">Inspecciona el coste real de cualquier texto antes de pegarlo a un agent.md o a un mensaje.</p>
-          <textarea id="tokenizer-input" rows="6" placeholder="Pega aquí lo que quieres medir…" class="w-full bg-panel2 border border-border rounded px-2 py-1 text-xs font-mono outline-none focus:border-accent"></textarea>
-          <div class="grid grid-cols-3 gap-2 text-center">
-            <div class="bg-panel2 p-2 rounded">
-              <div class="text-[10px] uppercase text-muted">chars</div>
-              <div id="tk-chars" class="font-mono text-sm">0</div>
-            </div>
-            <div class="bg-panel2 p-2 rounded">
-              <div class="text-[10px] uppercase text-muted">tokens</div>
-              <div id="tk-tokens" class="font-mono text-sm text-accent">0</div>
-            </div>
-            <div class="bg-panel2 p-2 rounded">
-              <div class="text-[10px] uppercase text-muted">€/M*</div>
-              <div id="tk-cost" class="font-mono text-sm">€0.000</div>
-            </div>
-          </div>
-          <div id="tk-visual" class="font-mono text-xs leading-relaxed p-2 bg-panel2 rounded border border-border whitespace-pre-wrap"></div>
-          <p class="text-[10px] text-muted">* Estimación a tarifa típica de input. Los tokens reales dependen del tokenizador del proveedor.</p>
-          <div class="mt-4 pt-3 border-t border-border" id="predictor"></div>
-        </div>
-
-        <!-- System prompt panel -->
-        <div data-panel="system" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm">System prompt + harness</h2>
-          <p class="text-xs text-muted leading-snug">Lo que SIEMPRE va en cada turno aunque no lo veas. Hacerlo visible es 50% de saber usar agentes.</p>
-          <div class="space-y-2">
-            <details class="bg-panel2 rounded border border-border">
-              <summary class="cursor-pointer px-2 py-1.5 text-xs font-semibold flex justify-between">
-                <span>System prompt</span>
-                <span class="font-mono text-muted" id="sys-prompt-tokens">—</span>
-              </summary>
-              <pre id="sys-prompt-body" class="text-[11px] p-2 whitespace-pre-wrap font-mono max-h-72 overflow-y-auto"></pre>
-            </details>
-            <details class="bg-panel2 rounded border border-border">
-              <summary class="cursor-pointer px-2 py-1.5 text-xs font-semibold flex justify-between">
-                <span>Tools / harness</span>
-                <span class="font-mono text-muted" id="sys-tools-tokens">—</span>
-              </summary>
-              <ul id="sys-tools-body" class="text-[11px] p-2 space-y-1"></ul>
-            </details>
-            <details class="bg-panel2 rounded border border-border" id="agentmd-section">
-              <summary class="cursor-pointer px-2 py-1.5 text-xs font-semibold flex justify-between">
-                <span>agent.md (opcional)</span>
-                <span class="font-mono text-muted" id="sys-agentmd-tokens">desactivado</span>
-              </summary>
-              <textarea id="agentmd-body" rows="6" placeholder="Sólo si tienes información propietaria que el agente necesita en CADA turno." class="w-full text-[11px] p-2 bg-bg font-mono outline-none"></textarea>
-              <div id="antipatterns-warnings" class="px-2 pb-2"></div>
-            </details>
-          </div>
-        </div>
-
-        <!-- Philosophy + Harnesses + Knowledge work panel -->
-        <div data-panel="philosophy" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm">Knowledge work</h2>
-          <p class="text-xs text-muted leading-snug">Más bullish aquí que en agentic coding. Acciones reales con ROI medible.</p>
-          <div id="kw-list" class="space-y-2"></div>
-
-          <div class="pt-3 border-t border-border">
-            <h2 class="font-semibold text-sm mb-2">Comparativa de harnesses</h2>
-            <p class="text-xs text-muted leading-snug mb-2">Los modelos son los mismos. La diferencia es cuánto control te dan sobre el contexto.</p>
-            <div id="harnesses-list" class="space-y-2"></div>
-          </div>
-
-          <div class="pt-3 border-t border-border">
-            <h2 class="font-semibold text-sm mb-2">Filosofía</h2>
-            <p class="text-xs text-muted leading-snug mb-2">La cultura del IDE. Lo que no es feature pero sí actitud.</p>
-            <div id="philosophy-list" class="space-y-2"></div>
-          </div>
+          <p class="text-[10px] text-muted">Heurística char/4. Los tokens reales del run vienen del API y se muestran en "Contexto".</p>
         </div>
       </div>
     </aside>
@@ -311,118 +172,91 @@
   <footer class="h-7 border-t border-border bg-panel flex items-center justify-between px-3 text-[11px] text-muted">
     <div id="status-left">Listo</div>
     <div class="flex items-center gap-3">
-      <span id="status-skills" class="hidden" title="Skills cargadas vs total">⌗ 0/0</span>
-      <span id="status-agents" class="hidden" title="Sub-agentes">▼ 0</span>
-      <span id="status-memory" class="hidden" title="Memoria">🧠 0</span>
-      <span id="status-diag" class="hidden" title="Diagnósticos abiertos">⚠ 0</span>
-      <span id="status-right" class="font-mono">tokens: 0</span>
+      <span id="status-file" class="font-mono"></span>
+      <span id="status-tokens" class="font-mono">tokens: 0</span>
     </div>
   </footer>
 
-  <!-- Skill builder modal -->
-  <div id="skill-builder" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-panel border border-border rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+  <!-- Settings modal -->
+  <div id="settings-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-panel border border-border rounded-lg w-full max-w-lg flex flex-col">
       <div class="flex items-center justify-between border-b border-border px-4 py-3">
+        <h3 class="font-semibold">Ajustes</h3>
+        <button data-close class="text-muted hover:text-white">✕</button>
+      </div>
+      <div class="p-4 space-y-4 text-sm">
         <div>
-          <h3 class="font-semibold">Constructor recursivo de skills</h3>
-          <p class="text-xs text-muted">Recorre el workflow con el agente y codifícalo solo al final.</p>
+          <label class="block text-xs text-muted mb-1">Proveedor</label>
+          <select id="cfg-provider" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="openai">OpenAI (GPT)</option>
+          </select>
         </div>
-        <button id="sb-close" class="text-muted hover:text-white">✕</button>
-      </div>
-      <div id="sb-body" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm"></div>
-      <div class="border-t border-border p-3 flex justify-between items-center gap-2">
-        <span id="sb-step" class="text-xs text-muted"></span>
-        <div class="flex gap-2">
-          <button id="sb-back" class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Atrás</button>
-          <button id="sb-next" class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Siguiente</button>
+        <div id="cfg-anthropic-block">
+          <label class="block text-xs text-muted mb-1">Modelo Anthropic</label>
+          <select id="cfg-anthropic-model" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
+            <option value="claude-opus-4-5">claude-opus-4-5</option>
+            <option value="claude-sonnet-4-5" selected>claude-sonnet-4-5</option>
+            <option value="claude-haiku-4-5">claude-haiku-4-5</option>
+          </select>
+          <label class="block text-xs text-muted mt-3 mb-1">ANTHROPIC_API_KEY</label>
+          <div class="flex gap-2">
+            <input id="cfg-anthropic-key" type="password" placeholder="sk-ant-…" class="flex-1 bg-panel2 border border-border rounded p-1.5 outline-none focus:border-accent" />
+            <button id="cfg-anthropic-save" class="text-xs px-3 rounded bg-accent/20 text-accent">Guardar</button>
+          </div>
+          <p id="cfg-anthropic-status" class="text-[10px] text-muted mt-1"></p>
         </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Planner modal -->
-  <div id="planner-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-panel border border-border rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between border-b border-border px-4 py-3">
+        <div id="cfg-openai-block" class="hidden">
+          <label class="block text-xs text-muted mb-1">Modelo OpenAI</label>
+          <select id="cfg-openai-model" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none">
+            <option value="gpt-4o" selected>gpt-4o</option>
+            <option value="gpt-4o-mini">gpt-4o-mini</option>
+            <option value="gpt-4.1">gpt-4.1</option>
+            <option value="o1">o1</option>
+            <option value="o3-mini">o3-mini</option>
+          </select>
+          <label class="block text-xs text-muted mt-3 mb-1">OPENAI_API_KEY</label>
+          <div class="flex gap-2">
+            <input id="cfg-openai-key" type="password" placeholder="sk-…" class="flex-1 bg-panel2 border border-border rounded p-1.5 outline-none focus:border-accent" />
+            <button id="cfg-openai-save" class="text-xs px-3 rounded bg-accent/20 text-accent">Guardar</button>
+          </div>
+          <p id="cfg-openai-status" class="text-[10px] text-muted mt-1"></p>
+        </div>
         <div>
-          <h3 class="font-semibold">Planner — goal → small PRs</h3>
-          <p class="text-xs text-muted">El plan es para ti, no para el agente. Divídelo en PRs pequeños que el review loop pueda cerrar.</p>
+          <label class="block text-xs text-muted mb-1">Max tokens por respuesta</label>
+          <input id="cfg-max-tokens" type="number" min="256" max="32000" value="4096" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none" />
         </div>
-        <button id="pl-close" class="text-muted hover:text-white">✕</button>
+        <div>
+          <label class="block text-xs text-muted mb-1">Auto-compact (%)</label>
+          <input id="cfg-auto-compact" type="number" min="50" max="95" step="5" value="80" class="w-full bg-panel2 border border-border rounded p-1.5 outline-none" />
+        </div>
+        <p class="text-[10px] text-muted">Las API keys se guardan cifradas vía Electron safeStorage (keychain/credential manager del SO).</p>
       </div>
-      <div id="pl-body" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm"></div>
-      <div class="border-t border-border p-3 flex justify-between items-center gap-2">
-        <span id="pl-step" class="text-xs text-muted"></span>
-        <div class="flex gap-2">
-          <button id="pl-back" class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Atrás</button>
-          <button id="pl-next" class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Siguiente</button>
-        </div>
+      <div class="border-t border-border p-3 flex justify-end gap-2">
+        <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Cerrar</button>
       </div>
     </div>
   </div>
 
-  <!-- Tutorial / "rundown" overlay -->
-  <div id="tutorial" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-    <div class="bg-panel border border-border rounded-lg w-full max-w-xl flex flex-col">
-      <div class="flex items-center justify-between border-b border-border px-4 py-3">
-        <h3 id="tutorial-title" class="font-semibold">Onboarding</h3>
-        <button id="tutorial-close" class="text-muted hover:text-white">✕</button>
-      </div>
-      <div id="tutorial-body" class="p-4 text-sm space-y-3 max-h-[70vh] overflow-y-auto"></div>
-      <div class="border-t border-border p-3 flex justify-between gap-2">
-        <span id="tutorial-step" class="text-xs text-muted"></span>
-        <div class="flex gap-2">
-          <button id="tutorial-back" class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Atrás</button>
-          <button id="tutorial-next" class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Siguiente</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Monaco editor -->
+  <!-- Monaco editor + xterm -->
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js"></script>
-  <script src="src/data.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
+
   <script src="src/tokens.js"></script>
   <script src="src/safe-storage.js"></script>
   <script src="src/projects.js"></script>
+  <script src="src/tools.js"></script>
   <script src="src/skills.js"></script>
-  <script src="src/agents.js"></script>
-  <script src="src/context.js"></script>
   <script src="src/memory.js"></script>
-  <script src="src/tokenizer.js"></script>
-  <script src="src/system-prompt.js"></script>
-  <script src="src/templates.js"></script>
-  <script src="src/productivity.js"></script>
+  <script src="src/context.js"></script>
   <script src="src/compaction.js"></script>
-  <script src="src/diagnostics.js"></script>
-  <script src="src/predictor.js"></script>
-  <script src="src/sycophancy.js"></script>
-  <script src="src/antipatterns.js"></script>
-  <script src="src/harnesses.js"></script>
-  <script src="src/philosophy.js"></script>
-  <script src="src/security.js"></script>
-  <script src="src/planner.js"></script>
-  <script src="src/review-loop.js"></script>
-  <script src="src/opensource.js"></script>
-  <script src="src/new-thread.js"></script>
-  <script src="src/dispatcher.js"></script>
-  <script src="src/workshop.js"></script>
-  <script src="src/knowledge-work.js"></script>
-  <script src="src/demo.js"></script>
-  <script src="src/i18n.js"></script>
-  <script src="src/chat-persistence.js"></script>
-  <script src="src/metrics.js"></script>
-  <script src="src/export.js"></script>
-  <script src="src/import.js"></script>
-  <script src="src/archetypes.js"></script>
-  <script src="src/shortcuts.js"></script>
-  <script src="src/command-palette.js"></script>
-  <script src="src/health.js"></script>
-  <script src="src/overview.js"></script>
-  <script src="src/mock-agent.js"></script>
-  <script src="src/skill-builder.js"></script>
-  <script src="src/tutorial.js"></script>
-  <script src="src/import-skill.js"></script>
+  <script src="src/tokenizer.js"></script>
+  <script src="src/settings.js"></script>
+  <script src="src/editor.js"></script>
+  <script src="src/terminal.js"></script>
+  <script src="src/git-panel.js"></script>
+  <script src="src/agent.js"></script>
   <script src="src/app.js"></script>
 </body>
 </html>

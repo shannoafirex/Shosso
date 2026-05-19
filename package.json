@@ -1,20 +1,31 @@
 {
   "name": "shosso",
-  "version": "0.1.0",
-  "description": "IDE nativo de skills, con gestión visible de contexto, construido para encarnar literalmente todo lo dicho en el podcast de Ross Mike sobre cómo se usan bien los agentes.",
+  "version": "0.2.0",
+  "description": "IDE real con agente LLM (Anthropic + OpenAI), terminal real (node-pty), git real, filesystem real. Sin simulacion.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --enable-logging",
+    "rebuild": "electron-rebuild -f -w node-pty",
+    "postinstall": "electron-builder install-app-deps",
     "pack": "electron-builder --dir",
     "dist": "electron-builder"
   },
-  "keywords": ["ide", "agents", "skills", "claude", "context"],
+  "keywords": ["ide", "agent", "claude", "anthropic", "openai", "tool-use", "skills"],
   "author": "Shosso",
   "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.65.0",
+    "openai": "^4.104.0",
+    "simple-git": "^3.27.0",
+    "node-pty": "^1.0.0",
+    "@xterm/xterm": "^5.5.0",
+    "@xterm/addon-fit": "^0.10.0"
+  },
   "devDependencies": {
     "electron": "^31.0.0",
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "@electron/rebuild": "^3.6.0"
   },
   "build": {
     "appId": "com.shosso.ide",
@@ -25,9 +36,7 @@
       "preload.js",
       "index.html",
       "src/**/*",
-      "templates/**/*",
-      "data/**/*",
-      "assets/**/*"
+      "node_modules/**/*"
     ],
     "mac": { "category": "public.app-category.developer-tools" },
     "win": { "target": "nsis" },

@@ -1,101 +1,115 @@
 # Shosso
 
-IDE nativo de skills construido con Electron. Hace visible lo que normalmente
-es invisible: cuántos tokens cuesta cada decisión, qué entra al contexto en
-cada turno, y por qué construir tus propias skills es lo único que escala.
+IDE de escritorio (Electron) con agente LLM **real** — Anthropic Claude o
+OpenAI GPT — capaz de leer, escribir, editar ficheros y ejecutar comandos
+en tu carpeta. Sin simulación.
 
-Encarna directamente las ideas del podcast de Ross Mike sobre cómo usar bien
-los agentes — no en marketing, sino en producto:
+## Qué es real
 
-- **Progressive disclosure** real: las skills sólo cargan su cuerpo cuando
-  el agente las necesita.
-- **Constructor recursivo de skills**: te obliga a vivir el workflow antes
-  de codificarlo.
-- **Captura de fallos → iteración**: cuando una skill falla, el panel de
-  diagnóstico te lleva al fix y lo aplica como nueva iteración.
-- **Visor de contexto**: ves system prompt, herramientas, agent.md y
-  conversación en vivo, con tokens reales por sección.
-- **Compactación automática** al 80% (como Claude Code / Codex).
-- **Capa de memoria** progresiva (no se inyecta entera).
-- **Tokenizador in-app** para auditar el coste de cualquier texto.
-- **Templates auditables locales** (sin marketplace externo, por seguridad).
-- **Medidor de productividad** que avisa cuando "escalas para verse cool"
-  (sub-agentes vacíos, skills sin iteraciones).
-- **Tour onboarding "rundown"** (sí, el de The Office).
+| Pieza | Implementación |
+|------|----------------|
+| Agente LLM | `@anthropic-ai/sdk` + `openai` con streaming + tool use (loop hasta `end_turn`) |
+| Tools | `read_file`, `write_file`, `edit_file`, `list_dir`, `glob`, `grep`, `bash`, `git`, `remember`, `recall` |
+| Filesystem | `fs/promises` vía IPC. Monaco edita ficheros en disco con dirty state y Cmd/Ctrl+S |
+| Terminal | `node-pty` + `xterm.js`. Shell nativo (bash/zsh/cmd) con resize y colores |
+| Git | `simple-git`. Status, diff, stage/unstage, commit, log |
+| API keys | Cifradas via Electron `safeStorage` (keychain/credential manager nativo del SO) |
+| Skills | Ficheros `.md` con frontmatter en `<proyecto>/.shosso/skills/` |
+| Memoria | Hechos persistentes por proyecto (localStorage) |
+| Compactación | Resumen vía el propio LLM cuando el contexto se acerca al 80% |
+| Tokens | Estimación char/4 para preview; tokens reales del API mostrados aparte |
 
 ## Requisitos
 
-- Node.js ≥ 18 (en Windows: instala desde [nodejs.org](https://nodejs.org))
-- npm o pnpm
+- Node.js ≥ 18
+- Compilador C/C++ para `node-pty`:
+  - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
+  - **Linux**: `build-essential`, `python3`
+  - **Windows**: Visual Studio Build Tools (o `npm install --global windows-build-tools`)
 
-## Ejecutar (Windows 11, macOS, Linux)
+## Instalar y arrancar
 
 ```bash
 npm install
 npm start
 ```
 
-En Windows: abre PowerShell o Windows Terminal en la carpeta del proyecto y
-ejecuta los comandos de arriba. Electron abrirá una ventana nativa.
-
-## Compilar instalador
+`postinstall` ejecuta `electron-builder install-app-deps` para recompilar
+`node-pty` contra tu versión de Electron. Si el terminal no aparece, corre:
 
 ```bash
-# Windows (.exe instalador NSIS)
-npm run dist -- --win
-
-# macOS (.dmg)
-npm run dist -- --mac
-
-# Linux (AppImage + .deb)
-npm run dist -- --linux
+npm run rebuild
 ```
 
-El instalador queda en `dist/`.
+## Configurar API key
+
+1. Abre Ajustes (botón ⚙ o Cmd/Ctrl+,)
+2. Elige proveedor: Anthropic o OpenAI
+3. Pega tu API key — se guarda **cifrada** en el keychain del SO
+4. Alternativa: `ANTHROPIC_API_KEY` o `OPENAI_API_KEY` como variable de entorno
+
+## Workflow
+
+1. **📁 Abre una carpeta** (Cmd/Ctrl+O) — tu proyecto real
+2. **Edita** ficheros en Monaco (Cmd/Ctrl+S guarda a disco)
+3. **Terminal** real abajo (Cmd/Ctrl+`) corre comandos en la carpeta
+4. **Git** en el panel lateral (Cmd/Ctrl+Shift+G para commit)
+5. **Chat con el agente** (Cmd/Ctrl+L): pide cosas y verás cada tool call
+   y su resultado en vivo
+6. **Skills**: prompts reutilizables guardados como `.md` en
+   `.shosso/skills/`. Pulsas ▶ o mencionas su nombre y se inyectan en el
+   siguiente turno (progressive disclosure)
+7. **Compactar**: cuando el contexto se llena, el LLM resume la
+   conversación y la reemplaza por un solo turno comprimido
 
 ## Atajos
 
-- `Cmd/Ctrl + K` — nuevo skill (constructor recursivo)
-- `Cmd/Ctrl + Shift + R` — tour onboarding "rundown"
-- `Cmd/Ctrl + Shift + C` — foco al panel de contexto
-- `Cmd/Ctrl + O` — abrir carpeta local
+- `Cmd/Ctrl+O` — abrir carpeta
+- `Cmd/Ctrl+,` — ajustes
+- `Cmd/Ctrl+S` — guardar fichero activo
+- `Cmd/Ctrl+L` — foco al chat
+- `` Cmd/Ctrl+` `` — toggle terminal
+- `Cmd/Ctrl+Shift+G` — commit
 
-## Estructura
+## Empaquetar instalador
+
+```bash
+npm run dist -- --win    # NSIS
+npm run dist -- --mac    # DMG
+npm run dist -- --linux  # AppImage + deb
+```
+
+## Arquitectura
 
 ```
-main.js               # proceso principal Electron
-preload.js            # bridge seguro renderer ↔ main
-index.html            # shell del IDE
+main.js                  Proceso principal (IPC, filesystem, pty, git, LLM)
+preload.js               Bridge seguro (contextIsolation activo)
+index.html               Shell del IDE
 src/
-  app.js              # bootstrap
-  data.js             # datos semilla (skills, agentes, templates, system prompt)
-  tokens.js           # estimador de tokens
-  skills.js           # store + render de skills (progressive disclosure)
-  agents.js           # orquesta principal + sub-agentes
-  context.js          # composición + medidor del contexto
-  memory.js           # capa de memoria con recall
-  tokenizer.js        # tokenizer in-app
-  system-prompt.js    # visor system prompt + tools + agent.md editable
-  templates.js        # templates scaffolds auditables
-  productivity.js     # medidor productividad vs "verse cool"
-  compaction.js       # compactación automática al 80%
-  diagnostics.js      # captura de fallos → iteración recursiva
-  mock-agent.js       # agente simulado (no LLM real; demuestra el flujo)
-  skill-builder.js    # constructor recursivo de skills (4 pasos)
-  tutorial.js         # tour onboarding "rundown" + filosofía
-  import-skill.js     # importar skill externa con aviso de seguridad
-  styles.css          # estilos
+  app.js                 Bootstrap
+  agent.js               Loop real con tool use (Anthropic + OpenAI)
+  tools.js               Definiciones + ejecutor de tools
+  editor.js              Monaco ↔ disco
+  terminal.js            xterm.js ↔ pty
+  git-panel.js           UI git con simple-git
+  settings.js            Provider/modelo/key (safeStorage)
+  skills.js              Skills como ficheros .md
+  memory.js              Hechos persistentes por proyecto
+  context.js             Tracking real de tokens (usage del API)
+  compaction.js          Resumen con el propio LLM
+  projects.js            Proyecto = carpeta real
+  tokens.js              Estimador char/4
+  tokenizer.js           Panel "pega y mide"
+  safe-storage.js        Wrapper localStorage
+  styles.css             Estilos
 ```
 
-## Por qué un agente simulado
+## Privacidad
 
-Para no acoplar Shosso a un proveedor específico ni pedir API keys, el
-agente que ves en el chat es simulado. Su trabajo es **enseñar**: te muestra
-exactamente cuándo cargaría una skill, cuándo recurriría a memoria, cuándo
-fallaría y qué propondría como fix.
-
-Cambiar `src/mock-agent.js` por una llamada real a Anthropic, OpenAI o
-cualquier otro proveedor es un cambio aislado: el resto del IDE no se entera.
+- Tu código se envía únicamente al proveedor LLM que elijas (Anthropic u
+  OpenAI) y solo cuando explícitamente mandas un mensaje al agente
+- Las API keys nunca salen de tu máquina, viven cifradas en el keychain
+- El terminal y los commits son locales
 
 ## Licencia
 
