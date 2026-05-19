@@ -117,6 +117,9 @@ window.I18N = {
 
   init() {
     this.lang = localStorage.getItem('shosso.lang') || this._detectBrowser();
+    // Defensive: si lang almacenado es inválido (otro idioma, tampering),
+    // fallback a 'es' antes de aplicar.
+    if (!this.STRINGS[this.lang]) this.lang = 'es';
     this.apply();
     const sel = document.getElementById('lang-switch');
     if (sel) {
@@ -139,7 +142,8 @@ window.I18N = {
   },
 
   t(key) {
-    return this.STRINGS[this.lang][key] || this.STRINGS.es[key] || key;
+    const langStrings = this.STRINGS[this.lang] || this.STRINGS.es;
+    return langStrings[key] || this.STRINGS.es[key] || key;
   },
 
   apply() {

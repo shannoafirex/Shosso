@@ -25,10 +25,18 @@ window.Projects = {
   ],
 
   init() {
-    // Si no hay proyecto actual, declarar 'default' y migrar
-    if (!localStorage.getItem(this.CURRENT_KEY)) {
+    const current = localStorage.getItem(this.CURRENT_KEY);
+    if (!current) {
       localStorage.setItem(this.CURRENT_KEY, 'default');
       this._ensure('default', 'Workspace principal');
+    } else {
+      // Defensive: current-project debe estar siempre en la lista.
+      // Si por corruption no lo está, lo añadimos para que el pill
+      // muestre nombre legible en vez del raw ID.
+      if (!this.list().find(p => p.id === current)) {
+        this._ensure(current,
+          current === 'default' ? 'Workspace principal' : current);
+      }
     }
     this._renderPill();
   },
