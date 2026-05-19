@@ -85,13 +85,14 @@ window.WorkspaceImport = {
         memory: modal.querySelector('#imp-opt-memory')?.checked,
         plans: modal.querySelector('#imp-opt-plans')?.checked,
         metrics: modal.querySelector('#imp-opt-metrics')?.checked,
+        diagnostics: modal.querySelector('#imp-opt-diagnostics')?.checked,
         agentMd: modal.querySelector('#imp-opt-agentmd')?.checked
       };
       const report = this.apply(parsed, opts);
       close();
       MockAgent.log('system',
         `📥 <b>Import completado.</b><br>` +
-        `Añadidos: ${report.skills} skills · ${report.agents} agentes · ${report.memory} memorias · ${report.plans} planes · ${report.metrics} métricas` +
+        `Añadidos: ${report.skills} skills · ${report.agents} agentes · ${report.memory} memorias · ${report.plans} planes · ${report.metrics} métricas · ${report.diagnostics} diagnósticos` +
         (report.agentMd ? ' · agent.md fusionado' : '') +
         `<br><span class="text-muted text-xs">Lo que ya existía se conservó intacto.</span>`);
     };
@@ -108,6 +109,7 @@ window.WorkspaceImport = {
         ${this._optRow('memory', 'Memoria', d.memory?.length || 0)}
         ${this._optRow('plans', 'Planes', d.plans?.length || 0)}
         ${this._optRow('metrics', 'Métricas', Object.keys(d.metrics || {}).length)}
+        ${this._optRow('diagnostics', 'Diagnósticos', d.diagnostics?.length || 0)}
         ${this._optRow('agentmd', 'agent.md', d.agentMd ? `${estimateTokens(d.agentMd)}t` : 'vacío', !!d.agentMd)}
       </div>
       <p class="text-[10px] text-muted mt-2">Marca lo que quieres importar. Duplicados (mismo id/nombre) se ignoran.</p>
@@ -127,7 +129,7 @@ window.WorkspaceImport = {
   },
 
   apply(d, opts) {
-    const report = { skills: 0, agents: 0, memory: 0, plans: 0, metrics: 0, agentMd: false };
+    const report = { skills: 0, agents: 0, memory: 0, plans: 0, metrics: 0, diagnostics: 0, agentMd: false };
 
     if (opts.skills && Array.isArray(d.skills)) {
       for (const s of d.skills) {
@@ -192,6 +194,24 @@ window.WorkspaceImport = {
         }
       }
       Metrics.persist();
+    }
+
+    if (opts.diagnostics && Array.isArray(d.diagnostics) && window.Diagnostics) {
+      for (const f of d.diagnostics) {
+        if (!f.skillId || !f.symptom) continue;
+        // Anti-duplicado: skill + symptom + fecha igual = skip
+        const sig = `${f.skillId}|${f.symptom}|${f.date}`;
+        const exists = window.Diagnostics.failures.some(x => `${x.skillId}|${x.symptom}|${x.date}` === sig);
+        if (!exists) {
+          window.Diagnostics.failures.push({
+            ...f,
+            id: 'imp-diag-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5)
+          });
+          report.diagnostics++;
+        }
+      }
+      window.Diagnostics.persist();
+      window.Diagnostics.render();
     }
 
     if (opts.agentMd && d.agentMd && window.SystemPromptView) {
