@@ -20,42 +20,45 @@ window.ReviewLoop = {
       return;
     }
     this.running = true;
-    const prSize = this._estimateSize(prDescription);
-    let score = this._initialScore(prSize);
-    let iter = 0;
-    MockAgent.log('system',
-      `▶ /grebloop iniciado — PR estimado <b>${prSize}</b> líneas.<br>` +
-      `Si supera 500 líneas, el loop probablemente no converja a 5/5.`);
-
-    while (score < 5 && iter < 6) {
-      iter++;
-      await MockAgent.sleep(700);
-      const issues = this._issuesFor(score, iter);
-      MockAgent.log('tool',
-        `<b>review iter ${iter}</b> · score <span class="text-warn">${score}/5</span><br>` +
-        issues.map(i => `• ${escapeHtml(i)}`).join('<br>'));
-      await MockAgent.sleep(500);
-      score = this._nextScore(score, prSize);
-      MockAgent.log('agent',
-        `Aplicando fix de iter ${iter}:<br>` +
-        issues.map(i => `<span class="text-success">✓ ${escapeHtml(i)}</span>`).join('<br>'),
-        `agente · /grebloop`);
-    }
-
-    if (score >= 5) {
+    let nextInQueue = null;
+    try {
+      const prSize = this._estimateSize(prDescription);
+      let score = this._initialScore(prSize);
+      let iter = 0;
       MockAgent.log('system',
-        `✅ <b>5/5 alcanzado en ${iter} vueltas.</b> PR listo para mergear. Esto es Karpathy auto-research loop aplicado a code review.`);
-    } else {
-      MockAgent.log('system',
-        `⏸ Loop pausado en ${score}/5 tras ${iter} vueltas. PR demasiado grande (${prSize} líneas). Divídelo con el Plan.`);
+        `▶ /grebloop iniciado — PR estimado <b>${prSize}</b> líneas.<br>` +
+        `Si supera 500 líneas, el loop probablemente no converja a 5/5.`);
+      while (score < 5 && iter < 6) {
+        iter++;
+        await MockAgent.sleep(700);
+        const issues = this._issuesFor(score, iter);
+        MockAgent.log('tool',
+          `<b>review iter ${iter}</b> · score <span class="text-warn">${score}/5</span><br>` +
+          issues.map(i => `• ${escapeHtml(i)}`).join('<br>'));
+        await MockAgent.sleep(500);
+        score = this._nextScore(score, prSize);
+        MockAgent.log('agent',
+          `Aplicando fix de iter ${iter}:<br>` +
+          issues.map(i => `<span class="text-success">✓ ${escapeHtml(i)}</span>`).join('<br>'),
+          `agente · /grebloop`);
+      }
+      if (score >= 5) {
+        MockAgent.log('system',
+          `✅ <b>5/5 alcanzado en ${iter} vueltas.</b> PR listo para mergear. Esto es Karpathy auto-research loop aplicado a code review.`);
+      } else {
+        MockAgent.log('system',
+          `⏸ Loop pausado en ${score}/5 tras ${iter} vueltas. PR demasiado grande (${prSize} líneas). Divídelo con el Plan.`);
+      }
+    } catch (err) {
+      console.error('ReviewLoop error:', err);
+      MockAgent.log('system', `⚠ /grebloop interrumpido: ${escapeHtml(err.message || String(err))}`);
+    } finally {
+      this.running = false;
+      if (this.queue.length > 0) nextInQueue = this.queue.shift();
     }
-    this.running = false;
-
-    // Procesa la cola
-    if (this.queue.length > 0) {
-      const next = this.queue.shift();
+    if (nextInQueue) {
       MockAgent.log('system', `▶ desencolando /grebloop (${this.queue.length} pendientes después)`);
-      setTimeout(() => this.run(next), 300);
+      setTimeout(() => this.run(nextInQueue), 300);
     }
   },
 

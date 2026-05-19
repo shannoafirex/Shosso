@@ -11,7 +11,7 @@ window.Demo = {
     if (this.running) return;
     this.running = true;
     const $ = ms => new Promise(r => setTimeout(r, ms));
-
+    try {
     MockAgent.log('system', `🎬 <b>Modo demo</b> activado. Mira sin teclear.`);
     await $(800);
 
@@ -58,6 +58,11 @@ window.Demo = {
       `4. /grebloop convergiendo a 5/5<br>` +
       `5. Knowledge work (revisión de contrato real)<br>` +
       `<span class="text-muted text-xs">Ya puedes seguir tú. Usa /help para ver todos los comandos.</span>`);
-    this.running = false;
+    } catch (err) {
+      console.error('Demo error:', err);
+      MockAgent.log('system', `⚠ Demo interrumpido: ${escapeHtml(err.message || String(err))}`);
+    } finally {
+      this.running = false;
+    }
   }
 };

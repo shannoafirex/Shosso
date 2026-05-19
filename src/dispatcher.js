@@ -25,18 +25,21 @@ window.Dispatcher = {
     MockAgent.log('system',
       `▶ <b>dispatch</b> a ${subs.length} sub-agente(s) en paralelo<br>` +
       `Tarea: <i>${escapeHtml(task)}</i>`);
-
-    // Cada sub-agente recibe la tarea; tiempo y resultado varían.
-    const runs = subs.map(a => this._runOne(a, task));
-    const results = await Promise.all(runs);
-
-    const ok = results.filter(r => r.ok).length;
-    const fail = results.length - ok;
-    MockAgent.log('system',
-      `✅ dispatch completado · <span class="text-success">${ok} ok</span>` +
-      (fail ? ` · <span class="text-warn">${fail} fallaron</span>` : '') +
-      `<br><span class="text-muted text-xs">Esto es agentic engineering: tú decides el goal, los minions trabajan en paralelo.</span>`);
-    this.running = false;
+    try {
+      const runs = subs.map(a => this._runOne(a, task));
+      const results = await Promise.all(runs);
+      const ok = results.filter(r => r.ok).length;
+      const fail = results.length - ok;
+      MockAgent.log('system',
+        `✅ dispatch completado · <span class="text-success">${ok} ok</span>` +
+        (fail ? ` · <span class="text-warn">${fail} fallaron</span>` : '') +
+        `<br><span class="text-muted text-xs">Esto es agentic engineering: tú decides el goal, los minions trabajan en paralelo.</span>`);
+    } catch (err) {
+      console.error('Dispatcher error:', err);
+      MockAgent.log('system', `⚠ dispatch interrumpido por error: ${escapeHtml(err.message || String(err))}`);
+    } finally {
+      this.running = false;
+    }
   },
 
   async _runOne(agent, task) {
