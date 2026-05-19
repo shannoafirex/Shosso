@@ -325,11 +325,18 @@ window.MockAgent = {
     return `Entendido. Esta consulta no requiere una skill específica.<br><span class="text-muted text-xs">(Si crees que sí, dime el nombre o crea una con +Skill.)</span>`;
   },
 
-  invokeSkill(id) {
+  async invokeSkill(id) {
     const s = SkillsStore.get(id);
     if (!s) return;
     document.querySelector('[data-tab="chat"]')?.click();
-    this.send(`Invoca la skill ${s.name}`);
+    // Bypassa _matchSkill — invoca directamente. Skills custom sin
+    // keywords no matcheaban y se quedaban con generic reply.
+    this.turn++;
+    this.log('user', `Invoca la skill ${escapeHtml(s.name)}`, 'tú');
+    Context.addConversationTokens(estimateTokens(`Invoca la skill ${s.name}`));
+    await this._runSkill(id, `invoca skill ${s.name}`);
+    Productivity.refresh();
+    Compaction.evaluate();
   },
 
   async _handleSlashCommands(text) {
