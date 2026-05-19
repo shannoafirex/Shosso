@@ -119,7 +119,9 @@ window.Tutorial = {
 
   render() {
     const steps = this._currentSteps();
-    const s = steps[this.step];
+    if (!steps || steps.length === 0) { this.close(); return; }
+    const s = steps[Math.min(this.step, steps.length - 1)];
+    if (!s) { this.close(); return; }
     document.getElementById('tutorial-title').textContent = s.title;
     document.getElementById('tutorial-body').innerHTML = s.body;
     document.getElementById('tutorial-step').textContent = `${this.step + 1} de ${steps.length}`;

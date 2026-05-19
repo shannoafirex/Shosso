@@ -201,6 +201,14 @@ window.Planner = {
       : '';
     let list = saved;
     if (this.recentFilter !== 'all') list = list.filter(p => p.tag === this.recentFilter);
+    if (list.length === 0 && this.recentFilter !== 'all') {
+      wrap.innerHTML = filterChips + `<div class="text-xs text-muted mt-2">Sin planes con tag "${escapeHtml(this.recentFilter)}". Cambia el filtro o crea uno nuevo.</div>`;
+      // Wire los chips para que el usuario pueda volver a 'all'
+      wrap.querySelectorAll('button.pl-filter').forEach(b => {
+        b.onclick = () => { this.recentFilter = b.dataset.tag; this.renderRecent(); };
+      });
+      return;
+    }
     wrap.innerHTML = filterChips + list.map(p => {
       const sent = p.prs.filter(x => x.status === 'sent').length;
       const total = p.prs.length;
