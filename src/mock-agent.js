@@ -339,7 +339,7 @@ window.MockAgent = {
   async invokeSkill(id) {
     const s = SkillsStore.get(id);
     if (!s) return;
-    document.querySelector('[data-tab="chat"]')?.click();
+    document.querySelector('.bottom-tab[data-tab="chat"]')?.click();
     // Bypassa _matchSkill — invoca directamente. Skills custom sin
     // keywords no matcheaban y se quedaban con generic reply.
     this.turn++;

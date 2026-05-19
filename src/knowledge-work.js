@@ -224,7 +224,7 @@ window.KnowledgeWork = {
   async run(id) {
     const a = this.ACTIONS.find(x => x.id === id);
     if (!a) return;
-    document.querySelector('[data-tab="chat"]')?.click();
+    document.querySelector('.bottom-tab[data-tab="chat"]')?.click();
     MockAgent.log('user', `Ejecuta knowledge work: ${a.name}`, 'tú');
 
     // Progress por pasos. NO usamos MockAgent.log (persistiría el HTML

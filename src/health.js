@@ -28,7 +28,7 @@ window.Health = {
         detail: orphanSkills.slice(0, 5).map(s => s.name).join(', '),
         fix: orphanSkills.length <= 10 ? {
           label: 'Ver lista en panel Skills',
-          action: () => document.querySelector('[data-tab="skills"]')?.click(),
+          action: () => document.querySelector('.side-tab[data-tab="skills"]')?.click(),
           skipReaudit: true
         } : null
       });
@@ -42,7 +42,7 @@ window.Health = {
         detail: 'Sin tags, no se pueden agrupar ni sugerir a sub-agentes nuevos.',
         fix: untaggedSkills.length <= 10 ? {
           label: 'Editar skills',
-          action: () => document.querySelector('[data-tab="skills"]')?.click(),
+          action: () => document.querySelector('.side-tab[data-tab="skills"]')?.click(),
           skipReaudit: true
         } : null
       });
@@ -68,7 +68,7 @@ window.Health = {
         detail: 'Esto es "escalar para verse cool" del podcast. Asígnales skills o bórralos.',
         fix: {
           label: 'Abrir tab Agentes',
-          action: () => document.querySelector('[data-tab="agents"]')?.click(),
+          action: () => document.querySelector('.side-tab[data-tab="agents"]')?.click(),
           skipReaudit: true
         }
       });
@@ -104,7 +104,7 @@ window.Health = {
         detail: 'Memoria que nunca se recupera no es memoria — es ruido. Considera podar.',
         fix: {
           label: 'Abrir tab Memoria',
-          action: () => document.querySelector('[data-tab="memory"]')?.click(),
+          action: () => document.querySelector('.side-tab[data-tab="memory"]')?.click(),
           skipReaudit: true
         }
       });
@@ -162,7 +162,7 @@ window.Health = {
         detail: 'Migra el contenido a skills. Si lo necesitas SIEMPRE, ya tienes una decisión deliberada — confírmalo.',
         fix: {
           label: 'Abrir tab Sistema',
-          action: () => document.querySelector('[data-tab="system"]')?.click(),
+          action: () => document.querySelector('.side-tab[data-tab="system"]')?.click(),
           skipReaudit: true
         }
       });

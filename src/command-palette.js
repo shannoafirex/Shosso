@@ -139,7 +139,7 @@ window.CommandPalette = {
         subtitle: a.role || '(sin rol)',
         icon: a.type === 'main' ? '◆' : '◇',
         action: () => {
-          document.querySelector('[data-tab="agents"]')?.click();
+          document.querySelector('.side-tab[data-tab="agents"]')?.click();
           if (a.type === 'sub') AgentsStore.edit(a.id);
         }
       });
@@ -153,7 +153,7 @@ window.CommandPalette = {
         subtitle: `${m.recalls || 0} recalls · ${estimateTokens(m.text)}t`,
         icon: '🧠',
         action: () => {
-          document.querySelector('[data-tab="memory"]')?.click();
+          document.querySelector('.side-tab[data-tab="memory"]')?.click();
         }
       });
     }
@@ -169,7 +169,7 @@ window.CommandPalette = {
         subtitle: `${sent}/${prs.length} PRs enviados · ${p.tag || 'sin tag'}`,
         icon: '📋',
         action: () => {
-          document.querySelector('[data-tab="plan"]')?.click();
+          document.querySelector('.side-tab[data-tab="plan"]')?.click();
         }
       });
     }
