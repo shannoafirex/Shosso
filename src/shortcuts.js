@@ -54,11 +54,13 @@ window.Shortcuts = {
     // Match contra bindings
     for (const b of this.BINDINGS) {
       if (b.keys.includes(k)) {
-        // Reglas de inputs: permitimos siempre los que escriben al chat,
-        // y los help. Otros (Planner.open) se cancelan si el foco es texto
-        // editable que no sea chat-input.
+        // En text fields no-chat permitimos solo los muy generales
         if (isText && t.id !== 'chat-input' && !['MOD+/', 'MOD+?', 'MOD+SHIFT+?', 'MOD+I'].includes(k)) {
-          continue;
+          // Aún así prevenimos el default del browser para no abrir Print
+          // dialog ni similares cuando el usuario presiona nuestros mod-keys
+          // en un textarea.
+          e.preventDefault();
+          return;
         }
         e.preventDefault();
         e.stopPropagation();
