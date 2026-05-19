@@ -3,6 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    CSP rationale (audited):
+    - 'unsafe-eval': required by Monaco's AMD loader (vs/loader.js) and the
+      monaco workers which compile language services at runtime.
+    - 'unsafe-inline': required by Tailwind's runtime (the cdn.tailwindcss.com
+      script injects a <style> element) and by Monaco's themed inline styles
+      on editor view-lines.
+    - data: kept for inline SVG/icon URLs.
+    - connect-src restricted to the two LLM APIs we actually call.
+  -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: https://cdn.tailwindcss.com https://cdn.jsdelivr.net; img-src 'self' data:; connect-src 'self' https://api.anthropic.com https://api.openai.com;" />
   <title>Shosso</title>
   <script src="https://cdn.tailwindcss.com"></script>
