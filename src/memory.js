@@ -10,7 +10,8 @@ window.MemoryStore = {
   items: [],
 
   init() {
-    this.items = SafeStorage.safeGet('shosso.memory', structuredClone(window.SEED_MEMORY));
+    const saved = SafeStorage.safeGet('shosso.memory', null);
+    this.items = Array.isArray(saved) ? saved : structuredClone(window.SEED_MEMORY);
     this.persist();
     document.getElementById('memory-form').addEventListener('submit', (e) => {
       e.preventDefault();

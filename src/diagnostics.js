@@ -8,7 +8,8 @@ window.Diagnostics = {
   failures: [],
 
   init() {
-    this.failures = SafeStorage.safeGet('shosso.failures', []);
+    const saved = SafeStorage.safeGet('shosso.failures', []);
+    this.failures = Array.isArray(saved) ? saved : [];
     this.render();
   },
 

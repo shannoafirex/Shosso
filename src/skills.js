@@ -5,7 +5,8 @@ window.SkillsStore = {
   skills: [],
 
   init() {
-    this.skills = SafeStorage.safeGet('shosso.skills', structuredClone(window.SEED_SKILLS));
+    const saved = SafeStorage.safeGet('shosso.skills', null);
+    this.skills = Array.isArray(saved) ? saved : structuredClone(window.SEED_SKILLS);
     this.persist();
   },
 

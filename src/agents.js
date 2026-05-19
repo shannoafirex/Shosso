@@ -5,7 +5,8 @@ window.AgentsStore = {
   agents: [],
 
   init() {
-    this.agents = SafeStorage.safeGet('shosso.agents', structuredClone(window.SEED_AGENTS));
+    const saved = SafeStorage.safeGet('shosso.agents', null);
+    this.agents = Array.isArray(saved) ? saved : structuredClone(window.SEED_AGENTS);
     this.persist();
   },
 

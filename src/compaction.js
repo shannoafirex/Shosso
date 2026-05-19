@@ -9,7 +9,8 @@ window.Compaction = {
   history: [],
 
   init() {
-    this.history = SafeStorage.safeGet('shosso.compactions', []).slice(0, 20);
+    const saved = SafeStorage.safeGet('shosso.compactions', []);
+    this.history = (Array.isArray(saved) ? saved : []).slice(0, 20);
     const cb = document.getElementById('cfg-auto-compact');
     if (cb) {
       cb.addEventListener('change', e => { this.auto = e.target.checked; });

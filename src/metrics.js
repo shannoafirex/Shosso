@@ -7,7 +7,8 @@ window.Metrics = {
   KEY: 'shosso.metrics',
 
   init() {
-    this.data = SafeStorage.safeGet(this.KEY, {});
+    const saved = SafeStorage.safeGet(this.KEY, {});
+    this.data = (saved && typeof saved === 'object' && !Array.isArray(saved)) ? saved : {};
   },
 
   persist() { SafeStorage.safeSet(this.KEY, this.data); },
