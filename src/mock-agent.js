@@ -27,6 +27,13 @@ window.MockAgent = {
     this.log('user', escapeHtml(userText), 'tú');
     Context.addConversationTokens(estimateTokens(userText));
 
+    // Comandos de barra: /grebloop, /goal, /plan
+    if (await this._handleSlashCommands(userText)) {
+      Productivity.refresh();
+      Compaction.evaluate();
+      return;
+    }
+
     // 0. Easter eggs — responden directamente y cierran el turno.
     if (await this._handleEasterEggs(userText)) {
       Productivity.refresh();
@@ -204,6 +211,45 @@ window.MockAgent = {
     this.send(`Invoca la skill ${s.name}`);
   },
 
+  async _handleSlashCommands(text) {
+    const m = text.trim().match(/^\/(\w+)(?:\s+(.+))?$/);
+    if (!m) return false;
+    const cmd = m[1].toLowerCase();
+    const args = m[2] || '';
+
+    if (cmd === 'grebloop') {
+      ReviewLoop.run(args || 'PR actual');
+      return true;
+    }
+    if (cmd === 'goal') {
+      if (!args) {
+        this.log('agent', `Uso: <code>/goal &lt;descripción del end state&gt;</code>. Define el estado final, no la tarea.`, 'agente');
+        return true;
+      }
+      this.log('agent',
+        `🎯 <b>Goal registrado.</b><br>` +
+        `End state: <i>${escapeHtml(args)}</i><br>` +
+        `Voy a trabajar hacia ahí. Si quieres, abre el Planner (panel <b>Plan</b>) para dividirlo en PRs pequeños.`,
+        'agente · /goal');
+      return true;
+    }
+    if (cmd === 'plan') {
+      Planner.open();
+      this.log('system', 'Abriendo Planner…');
+      return true;
+    }
+    if (cmd === 'opensource') {
+      const r = OpenSource.fetch(args);
+      this.log(r.ok ? 'agent' : 'system', escapeHtml(r.msg), r.ok ? 'agente · opensource' : null);
+      return true;
+    }
+    if (cmd === 'compact' || cmd === 'newthread') {
+      NewThread.start();
+      return true;
+    }
+    return false;
+  },
+
   async _handleEasterEggs(text) {
     if (/(1\.?8\s*(billion|bn|b)\b|vibe[- ]?cod(e|ed|ing)|\$1\.8|1800 ?millones)/i.test(text)) {
       await this.sleep(220);
@@ -240,6 +286,57 @@ window.MockAgent = {
         `💸 Conocimiento que antes requería 20 personas durante 20 años hoy cuesta ~$20/mes.<br>` +
         `Eso es un cambio de orden de magnitud. La pregunta no es si te afecta — es si lo usas.<br>` +
         `<span class="text-muted text-xs">Y "usarlo bien" empieza por leer este chat, no por descargar 30 skills aleatorias.</span>`,
+        'agente · easter egg');
+      return true;
+    }
+    // Am I cooked?
+    if (/(am i cooked|estoy cooked|estoy comprometido|me hackearon)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `🩺 Para chequearlo: abre el panel <b>Seguridad</b> → "Am I cooked?". Pega el resumen del breach (paquete, CVE, tweet) y escaneo tu workspace. ` +
+        `O en chat: dime el nombre del paquete y la versión.`,
+        'agente · easter egg');
+      return true;
+    }
+    // Reference the codebase
+    if (/(reference the codebase|referencia el codebase|@codebase)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `📚 <b>Code as context.</b> Para hacerlo bien:<br>` +
+        `1. <code>opensource &lt;repo&gt;</code> en el terminal (clona el código del paquete).<br>` +
+        `2. En tu prompt: "referencia el codebase repos/github.com/X" + lo que quieres construir.<br>` +
+        `El agente lee el código real en vez de adivinar de docs man-made.`,
+        'agente · easter egg');
+      return true;
+    }
+    // Vibe vs agentic
+    if (/(vibe cod|agentic engineer)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `⚔ <b>Vibe coding</b>: ofreces el thinking al agente.<br>` +
+        `<b>Agentic engineering</b>: tú piensas, los minions trabajan. Skills + plan + review loop = output 100x.<br>` +
+        `Shosso está diseñado para lo segundo.`,
+        'agente · easter egg');
+      return true;
+    }
+    // Svelte vs React / Convex vs Supabase (stacks codificados)
+    if (/(svelte vs react|convex vs supabase|codified stack|tooling para agentes)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `🧰 <b>Elige stack codificado</b> (el agente entiende mejor):<br>` +
+        `• Frontend: <b>Svelte</b> (HTML+TS al hueso) > React (hooks + foot-guns).<br>` +
+        `• Backend: <b>Convex</b> (todo es código TS, sin dashboard) > Supabase (a veces hace falta UI).<br>` +
+        `Regla: menos dashboard, más código. El agente sólo lee código.`,
+        'agente · easter egg');
+      return true;
+    }
+    // Knowledge work bullish
+    if (/(knowledge work|trabajo de conocimiento|reemplazar abogado|reemplazar contable)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `💼 <b>Más bullish en knowledge work que en coding.</b><br>` +
+        `Contratos, reportes, accounting, research legal/médico personal: el modelo ya es suficiente. Lo que falta es <b>tooling</b>.<br>` +
+        `Un Claude Pro de $200/mes ahorra 5.000€ en un contrato, 6.000€ en accounting. ROI evidente.`,
         'agente · easter egg');
       return true;
     }

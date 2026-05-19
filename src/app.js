@@ -46,8 +46,12 @@ function init() {
   AntiPatterns.init();
   Harnesses.init();
   Philosophy.init();
+  Security.init();
+  Planner.init();
+  NewThread.init();
   Tutorial.init();
   ImportSkill.init();
+  setupTerminal();
 
   renderFileTree();
   SkillsStore.render();
@@ -107,6 +111,43 @@ function openFile(f) {
   }
   renderTabs();
   renderFileTree();
+}
+
+function setupTerminal() {
+  const form = document.getElementById('terminal-form');
+  const inp = document.getElementById('terminal-input');
+  const out = document.getElementById('terminal-output');
+  if (!form) return;
+  const print = (html, cls = '') => {
+    const div = document.createElement('div');
+    div.className = cls;
+    div.innerHTML = html;
+    out.appendChild(div);
+    out.parentElement.scrollTop = out.parentElement.scrollHeight;
+  };
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const cmd = inp.value.trim();
+    if (!cmd) return;
+    print(`<span class="text-accent2">$</span> ${escapeHtml(cmd)}`);
+    inp.value = '';
+    const [bin, ...args] = cmd.split(/\s+/);
+    if (bin === 'help') {
+      print('comandos: opensource &lt;repo&gt;, ls [dir], clear, help', 'text-muted');
+    } else if (bin === 'clear') {
+      out.innerHTML = '';
+    } else if (bin === 'ls') {
+      const dir = args[0] || '.';
+      const items = openFiles.filter(f => f.path.startsWith(dir) || dir === '.');
+      print(items.slice(0, 20).map(f => f.path).join('<br>') || `(vacío)`);
+    } else if (bin === 'opensource') {
+      if (!args[0]) { print('uso: opensource &lt;repo&gt;', 'text-warn'); return; }
+      const r = OpenSource.fetch(args[0]);
+      print(r.msg, r.ok ? 'text-success' : 'text-warn');
+    } else {
+      print(`comando no reconocido: ${escapeHtml(bin)}`, 'text-warn');
+    }
+  });
 }
 
 function detectLang(path) {

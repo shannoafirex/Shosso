@@ -98,11 +98,20 @@
               <button class="px-3 text-xs text-accent2 hover:text-white">Enviar</button>
             </form>
           </div>
-          <div data-panel="terminal" class="bottom-panel hidden h-full p-3 font-mono text-xs overflow-y-auto" id="terminal">
-            <div class="text-muted">$ shosso --version</div>
-            <div>Shosso 0.1.0 (Electron)</div>
-            <div class="text-muted mt-2">$ ls skills/</div>
-            <div id="terminal-skills"></div>
+          <div data-panel="terminal" class="bottom-panel hidden h-full flex flex-col" id="terminal-wrap">
+            <div id="terminal" class="flex-1 p-3 font-mono text-xs overflow-y-auto">
+              <div class="text-muted">$ shosso --version</div>
+              <div>Shosso 0.1.0 (Electron)</div>
+              <div class="text-muted mt-1">Comandos: opensource &lt;repo&gt;, ls, clear, help</div>
+              <div class="text-muted mt-2">$ ls skills/</div>
+              <div id="terminal-skills"></div>
+              <div id="terminal-output" class="mt-2"></div>
+            </div>
+            <form id="terminal-form" class="flex border-t border-border">
+              <span class="px-2 py-1.5 text-xs font-mono text-accent2">$</span>
+              <input id="terminal-input" type="text" placeholder="opensource browser-use" autocomplete="off"
+                class="flex-1 bg-transparent text-xs font-mono outline-none py-1.5 pr-2" />
+            </form>
           </div>
           <div data-panel="logs" class="bottom-panel hidden h-full p-3 font-mono text-xs overflow-y-auto" id="ctx-logs"></div>
           <div data-panel="diagnostics" class="bottom-panel hidden h-full p-3 overflow-y-auto" id="diagnostics-panel"></div>
@@ -115,14 +124,39 @@
       <nav class="flex border-b border-border overflow-x-auto whitespace-nowrap">
         <button data-tab="skills" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide bg-panel2">Skills</button>
         <button data-tab="agents" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Agentes</button>
+        <button data-tab="plan" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Plan</button>
         <button data-tab="context" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Contexto</button>
         <button data-tab="memory" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Memoria</button>
         <button data-tab="tokenizer" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Tokens</button>
         <button data-tab="system" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Sistema</button>
+        <button data-tab="security" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Seguridad</button>
         <button data-tab="philosophy" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Filosofía</button>
       </nav>
       <div class="flex-1 overflow-y-auto">
-        <!-- Skills panel -->
+        <!-- Plan panel -->
+        <div data-panel="plan" class="side-panel hidden p-3 space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="font-semibold text-sm">Planes</h2>
+            <button id="btn-new-plan" class="text-xs px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30">+ Plan</button>
+          </div>
+          <p class="text-xs text-muted leading-snug">El plan es para TI — accountability. Después se divide en PRs pequeños que el review loop (<code>/grebloop</code>) puede cerrar.</p>
+          <div id="plans-list" class="space-y-2"></div>
+          <div class="pt-3 border-t border-border">
+            <h3 class="text-xs uppercase tracking-wide text-muted mb-2">Comandos rápidos</h3>
+            <ul class="text-xs space-y-1">
+              <li><code class="text-accent2">/grebloop</code> — auto-review hasta 5/5</li>
+              <li><code class="text-accent2">/goal &lt;estado&gt;</code> — define end state al estilo Codex</li>
+              <li><code class="text-accent2">opensource &lt;repo&gt;</code> — clona código en el workspace (terminal)</li>
+              <li><code class="text-accent2">reference the codebase</code> — tag para inline en prompts</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Security panel -->
+        <div data-panel="security" class="side-panel hidden p-3">
+          <div id="security-panel-body"></div>
+        </div>
+
         <div data-panel="skills" class="side-panel p-3 space-y-2">
           <div class="flex items-center justify-between mb-2">
             <h2 class="font-semibold text-sm">Skills disponibles</h2>
@@ -275,6 +309,27 @@
     </div>
   </div>
 
+  <!-- Planner modal -->
+  <div id="planner-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-panel border border-border rounded-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-border px-4 py-3">
+        <div>
+          <h3 class="font-semibold">Planner — goal → small PRs</h3>
+          <p class="text-xs text-muted">El plan es para ti, no para el agente. Divídelo en PRs pequeños que el review loop pueda cerrar.</p>
+        </div>
+        <button id="pl-close" class="text-muted hover:text-white">✕</button>
+      </div>
+      <div id="pl-body" class="flex-1 overflow-y-auto p-4 space-y-3 text-sm"></div>
+      <div class="border-t border-border p-3 flex justify-between items-center gap-2">
+        <span id="pl-step" class="text-xs text-muted"></span>
+        <div class="flex gap-2">
+          <button id="pl-back" class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Atrás</button>
+          <button id="pl-next" class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Tutorial / "rundown" overlay -->
   <div id="tutorial" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
     <div class="bg-panel border border-border rounded-lg w-full max-w-xl flex flex-col">
@@ -312,6 +367,11 @@
   <script src="src/antipatterns.js"></script>
   <script src="src/harnesses.js"></script>
   <script src="src/philosophy.js"></script>
+  <script src="src/security.js"></script>
+  <script src="src/planner.js"></script>
+  <script src="src/review-loop.js"></script>
+  <script src="src/opensource.js"></script>
+  <script src="src/new-thread.js"></script>
   <script src="src/mock-agent.js"></script>
   <script src="src/skill-builder.js"></script>
   <script src="src/tutorial.js"></script>
