@@ -22,7 +22,14 @@ window.SafeStorage = {
   // Si quota se excede, intenta liberar espacio podando claves grandes
   // (chat history, compactions history, etc.) y reintenta una vez.
   safeSet(key, value) {
-    const str = typeof value === 'string' ? value : JSON.stringify(value);
+    let str;
+    try {
+      str = typeof value === 'string' ? value : JSON.stringify(value);
+    } catch (e) {
+      // JSON.stringify lanza en circular refs u objetos no-serializable
+      console.warn(`SafeStorage.set: cannot serialize ${key}`, e);
+      return false;
+    }
     try {
       localStorage.setItem(key, str);
       return true;
@@ -31,7 +38,6 @@ window.SafeStorage = {
         console.warn('SafeStorage.set unexpected error:', e);
         return false;
       }
-      // Quota. Intenta pruning agresivo y reintenta.
       console.warn('SafeStorage: quota exceeded, pruning...');
       this._prune();
       try {
