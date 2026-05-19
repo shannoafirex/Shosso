@@ -51,10 +51,10 @@
   <main class="grid grid-cols-12 h-[calc(100vh-3rem-1.75rem)]">
     <!-- Left: File explorer + git + skills tabs -->
     <aside class="col-span-2 border-r border-border bg-panel flex flex-col">
-      <nav class="flex border-b border-border text-[10px] uppercase tracking-wider">
-        <button data-leftTab="files" class="left-tab flex-1 px-2 py-1.5 bg-panel2">Archivos</button>
-        <button data-leftTab="git" class="left-tab flex-1 px-2 py-1.5">Git</button>
-        <button data-leftTab="skills" class="left-tab flex-1 px-2 py-1.5">Skills</button>
+      <nav role="tablist" aria-label="Panel izquierdo" class="flex border-b border-border text-[10px] uppercase tracking-wider">
+        <button role="tab" aria-selected="true" tabindex="0" data-leftTab="files" class="left-tab flex-1 px-2 py-1.5 bg-panel2">Archivos</button>
+        <button role="tab" aria-selected="false" tabindex="-1" data-leftTab="git" class="left-tab flex-1 px-2 py-1.5">Git</button>
+        <button role="tab" aria-selected="false" tabindex="-1" data-leftTab="skills" class="left-tab flex-1 px-2 py-1.5">Skills</button>
       </nav>
       <div class="flex-1 overflow-y-auto">
         <div data-leftPanel="files" class="left-panel h-full">
@@ -104,11 +104,11 @@
       <div id="tabs" class="flex items-center bg-panel border-b border-border h-9 px-1 overflow-x-auto"></div>
       <div id="editor" class="flex-1"></div>
       <div class="h-60 border-t border-border bg-panel flex flex-col">
-        <div class="flex items-center border-b border-border">
-          <button data-tab="chat" class="bottom-tab px-3 py-1.5 text-xs border-r border-border bg-panel2">Chat (agente)</button>
-          <button data-tab="terminal" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Terminal</button>
-          <button data-tab="logs" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Logs agente</button>
-          <span id="run-status" class="hidden ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-accent/20 text-accent"></span>
+        <div role="tablist" aria-label="Panel inferior" class="flex items-center border-b border-border">
+          <button role="tab" aria-selected="true" tabindex="0" data-tab="chat" class="bottom-tab px-3 py-1.5 text-xs border-r border-border bg-panel2">Chat (agente)</button>
+          <button role="tab" aria-selected="false" tabindex="-1" data-tab="terminal" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Terminal</button>
+          <button role="tab" aria-selected="false" tabindex="-1" data-tab="logs" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Logs agente</button>
+          <span id="run-status" role="status" aria-live="polite" class="hidden ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-accent/20 text-accent"></span>
         </div>
         <div id="bottom-panels" class="flex-1 overflow-hidden">
           <div data-panel="chat" class="bottom-panel h-full flex flex-col">
@@ -130,10 +130,10 @@
 
     <!-- Right: System prompt + tokenizer + memory inspector -->
     <aside class="col-span-3 border-l border-border bg-panel flex flex-col">
-      <nav class="flex border-b border-border text-[10px] uppercase tracking-wider">
-        <button data-rightTab="system" class="right-tab flex-1 px-2 py-2 bg-panel2">Sistema</button>
-        <button data-rightTab="context" class="right-tab flex-1 px-2 py-2">Contexto</button>
-        <button data-rightTab="tokens" class="right-tab flex-1 px-2 py-2">Tokens</button>
+      <nav role="tablist" aria-label="Panel derecho" class="flex border-b border-border text-[10px] uppercase tracking-wider">
+        <button role="tab" aria-selected="true" tabindex="0" data-rightTab="system" class="right-tab flex-1 px-2 py-2 bg-panel2">Sistema</button>
+        <button role="tab" aria-selected="false" tabindex="-1" data-rightTab="context" class="right-tab flex-1 px-2 py-2">Contexto</button>
+        <button role="tab" aria-selected="false" tabindex="-1" data-rightTab="tokens" class="right-tab flex-1 px-2 py-2">Tokens</button>
       </nav>
       <div class="flex-1 overflow-y-auto">
         <div data-rightPanel="system" class="right-panel p-3 space-y-3 text-xs">
