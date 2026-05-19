@@ -98,7 +98,10 @@ window.Planner = {
     });
     ul.querySelectorAll('button[data-action="send"]').forEach(b => {
       b.onclick = () => {
-        const p = this.draft.prs[+b.dataset.i];
+        const idx = +b.dataset.i;
+        const p = this.draft.prs[idx];
+        p.status = 'sent';
+        p.sentAt = Date.now();
         this._savePlan();
         this.close();
         MockAgent.send(`Implementa este PR pequeño:\n\n**${p.title}**\n${p.body}`);
@@ -166,11 +169,22 @@ window.Planner = {
       wrap.innerHTML = '<div class="text-xs text-muted">Sin planes aún. El plan es para ti — accountability, no para el agente.</div>';
       return;
     }
-    wrap.innerHTML = saved.map(p => `
+    wrap.innerHTML = saved.map(p => {
+      const sent = p.prs.filter(x => x.status === 'sent').length;
+      const total = p.prs.length;
+      const pct = total ? Math.round((sent / total) * 100) : 0;
+      const barColor = pct === 100 ? 'bg-success' : pct >= 50 ? 'bg-accent' : 'bg-warn';
+      return `
       <div class="bg-panel2 border border-border rounded p-2 text-xs">
-        <div class="font-semibold">${escapeHtml(p.goal.slice(0, 80))}</div>
-        <div class="text-muted text-[10px] mt-1">${p.prs.length} PRs · ${new Date(p.savedAt).toLocaleDateString()}</div>
+        <div class="flex justify-between items-start gap-2">
+          <div class="font-semibold flex-1 truncate" title="${escapeHtml(p.goal)}">${escapeHtml(p.goal.slice(0, 80))}</div>
+          <span class="font-mono text-[10px] text-muted whitespace-nowrap">${sent}/${total}</span>
+        </div>
+        <div class="h-1.5 bg-bg rounded overflow-hidden mt-1.5">
+          <div class="h-full ${barColor}" style="width:${pct}%"></div>
+        </div>
+        <div class="text-muted text-[10px] mt-1">${new Date(p.savedAt).toLocaleDateString()}</div>
       </div>
-    `).join('');
+    `;}).join('');
   }
 };

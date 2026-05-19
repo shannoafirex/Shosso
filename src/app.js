@@ -271,6 +271,23 @@ function setupListeners() {
 
   document.getElementById('btn-demo').addEventListener('click', () => Demo.run());
 
+  // Filtros (search across collections)
+  const skillsFilter = document.getElementById('skills-filter');
+  if (skillsFilter) skillsFilter.addEventListener('input', e => {
+    SkillsStore.filter = e.target.value.trim();
+    SkillsStore.render();
+  });
+  const memoryFilter = document.getElementById('memory-filter');
+  if (memoryFilter) memoryFilter.addEventListener('input', e => {
+    MemoryStore.filter = e.target.value.trim();
+    MemoryStore.render();
+  });
+  const diagFilter = document.getElementById('diag-filter');
+  if (diagFilter) diagFilter.addEventListener('change', e => {
+    Diagnostics.filter = e.target.value;
+    Diagnostics.render();
+  });
+
   document.getElementById('btn-reset').addEventListener('click', async () => {
     let ok = false;
     if (window.shosso?.confirm) {

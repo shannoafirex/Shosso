@@ -179,6 +179,8 @@
             </div>
           </div>
           <p class="text-xs text-muted leading-snug mb-2" data-i18n="panel.skills.desc">Solo nombre + descripción están en contexto. El cuerpo se carga cuando el agente lo necesita (progressive disclosure).</p>
+          <input id="skills-filter" type="text" placeholder="filtrar skills…"
+            class="w-full bg-panel2 border border-border rounded px-2 py-1 text-xs outline-none focus:border-accent mb-2" />
           <ul id="skills-list" class="space-y-2"></ul>
         </div>
 
@@ -215,6 +217,8 @@
         <div data-panel="memory" class="side-panel hidden p-3 space-y-3">
           <h2 class="font-semibold text-sm" data-i18n="panel.memory.title">Capa de memoria</h2>
           <p class="text-xs text-muted leading-snug" data-i18n="panel.memory.desc">Hechos persistentes entre sesiones. NO viven en el contexto principal; se recuperan cuando son relevantes (igual que skills, progressive).</p>
+          <input id="memory-filter" type="text" placeholder="filtrar memoria…"
+            class="w-full bg-panel2 border border-border rounded px-2 py-1 text-xs outline-none focus:border-accent" />
           <div id="memory-list" class="space-y-2"></div>
           <form id="memory-form" class="flex gap-1 mt-2">
             <input id="memory-input" placeholder="Anota un hecho persistente…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-xs outline-none focus:border-accent" />
@@ -302,6 +306,10 @@
   <footer class="h-7 border-t border-border bg-panel flex items-center justify-between px-3 text-[11px] text-muted">
     <div id="status-left">Listo</div>
     <div class="flex items-center gap-3">
+      <span id="status-skills" class="hidden" title="Skills cargadas vs total">⌗ 0/0</span>
+      <span id="status-agents" class="hidden" title="Sub-agentes">▼ 0</span>
+      <span id="status-memory" class="hidden" title="Memoria">🧠 0</span>
+      <span id="status-diag" class="hidden" title="Diagnósticos abiertos">⚠ 0</span>
       <span id="status-iter" class="hidden">iter: 0</span>
       <span id="status-right" class="font-mono">tokens: 0</span>
     </div>

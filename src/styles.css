@@ -95,6 +95,17 @@ html, body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", R
 
 /* Workshop (split-screen multi-agent) */
 .workshop-grid { display: grid; grid-auto-rows: minmax(0, 1fr); }
+.workshop-scroll {
+  display: flex !important;
+  flex-direction: row;
+  overflow-x: auto;
+  grid-template-columns: unset;
+}
+.workshop-scroll .workshop-col {
+  min-width: 260px;
+  max-width: 320px;
+  flex: 0 0 auto;
+}
 .workshop-col {
   background: #11151c;
   border: 1px solid #222831;

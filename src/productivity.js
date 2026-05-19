@@ -6,33 +6,43 @@
 // con iteraciones reales y memoria poblada.
 
 window.Productivity = {
+  // Recalibrado: el cap antiguo saturaba en ~70 para power users.
+  // Ahora las skills maduras escalan más y se cuenta el ratio de subs con
+  // skills asignadas.
   computeScore() {
     const agents = AgentsStore.agents;
     const skills = SkillsStore.skills;
 
     const subAgents = agents.filter(a => a.type === 'sub');
     const orphanSubs = subAgents.filter(a => (a.skills || []).length === 0);
+    const wiredSubs = subAgents.length - orphanSubs.length;
 
     const totalIterations = skills.reduce((s, k) => s + (k.iterations || 0), 0);
     const battleTested = skills.filter(k => (k.iterations || 0) >= 3).length;
+    const ratioWired = subAgents.length ? wiredSubs / subAgents.length : 1;
 
-    // Score 0..100
-    let score = 0;
-    score += Math.min(40, battleTested * 10);                 // hasta 40 por skills maduras
-    score += Math.min(20, totalIterations * 2);                // hasta 20 por iteración real
-    score += Math.min(15, MemoryStore.items.length * 3);       // hasta 15 por memoria poblada
-    score += subAgents.length > 0 && orphanSubs.length === 0 ? 15 : 0; // 15 si todos los subs tienen skills
-    score -= orphanSubs.length * 10;                           // -10 por cada sub-agente vacío
-    score -= (skills.length === 0 ? 20 : 0);                   // -20 si no tienes ninguna skill
+    // Componentes (cada uno puede dar hasta su máximo):
+    const compSkills = Math.min(35, battleTested * 5 + Math.min(15, skills.length));
+    const compIters  = Math.min(25, totalIterations * 1.5);
+    const compMem    = Math.min(15, MemoryStore.items.length * 1.2);
+    const compSubs   = Math.round(20 * ratioWired);             // hasta 20 si TODOS los subs tienen skills
+    const compResolved = Diagnostics?.failures
+      ? Math.min(15, Diagnostics.failures.filter(f => f.resolved).length * 2)
+      : 0;
 
+    let score = compSkills + compIters + compMem + compSubs + compResolved;
+    if (subAgents.length === 0 && skills.length > 0) score = Math.max(score, 30); // baseline
+    if (skills.length === 0) score = Math.min(score, 20);
     score = Math.max(0, Math.min(100, score));
 
     return {
       score,
       battleTested,
       orphanSubs: orphanSubs.length,
+      wiredSubs,
       totalSkills: skills.length,
-      totalIterations
+      totalIterations,
+      breakdown: { compSkills, compIters, compMem, compSubs, compResolved }
     };
   },
 

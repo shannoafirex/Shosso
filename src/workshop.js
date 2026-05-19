@@ -40,7 +40,9 @@ window.Workshop = {
     if (n === 1) return 'workshop-grid grid-cols-1';
     if (n === 2) return 'workshop-grid grid-cols-2';
     if (n === 3) return 'workshop-grid grid-cols-3';
-    return 'workshop-grid grid-cols-2 lg:grid-cols-4';
+    if (n <= 4) return 'workshop-grid grid-cols-2 lg:grid-cols-4';
+    // >4 sub-agentes: scroll horizontal en vez de columnas estrechísimas
+    return 'workshop-grid workshop-scroll';
   },
 
   // Llamado por Dispatcher al iniciar el run de un sub-agente.

@@ -77,14 +77,23 @@ window.MemoryStore = {
     return hits;
   },
 
+  filter: '',
+
   render() {
     const wrap = document.getElementById('memory-list');
     if (!wrap) return;
-    if (this.items.length === 0) {
-      wrap.innerHTML = '<div class="text-xs text-muted">Sin memoria. Anota un hecho que el agente deba recordar entre sesiones.</div>';
+    let list = this.items;
+    if (this.filter) {
+      const q = this.filter.toLowerCase();
+      list = list.filter(m => m.text.toLowerCase().includes(q));
+    }
+    if (list.length === 0) {
+      wrap.innerHTML = this.filter
+        ? `<div class="text-xs text-muted">Sin resultados para "${escapeHtml(this.filter)}".</div>`
+        : '<div class="text-xs text-muted">Sin memoria. Anota un hecho que el agente deba recordar entre sesiones.</div>';
       return;
     }
-    wrap.innerHTML = this.items.map(m => `
+    wrap.innerHTML = list.map(m => `
       <div class="bg-panel2 border border-border rounded p-2 text-xs flex justify-between items-start gap-2">
         <div>
           <div>${escapeHtml(m.text)}</div>

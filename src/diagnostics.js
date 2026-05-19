@@ -74,17 +74,38 @@ window.Diagnostics = {
     Productivity.refresh();
   },
 
+  filter: 'all', // all | open | resolved | <skillId>
+
   render() {
     const panel = document.getElementById('diagnostics-panel');
     if (!panel) return;
-    if (this.failures.length === 0) {
-      panel.innerHTML = `<div class="text-xs text-muted">Sin fallos registrados. Cuando una skill falle, aparecerá aquí para que la mejores.</div>
+    let list = this.failures;
+    if (this.filter === 'open') list = list.filter(f => !f.resolved);
+    else if (this.filter === 'resolved') list = list.filter(f => f.resolved);
+    else if (this.filter !== 'all') list = list.filter(f => f.skillId === this.filter);
+
+    const skillOpts = [...new Set(this.failures.map(f => f.skillId))]
+      .map(id => `<option value="${escapeHtml(id)}">${escapeHtml(id)}</option>`).join('');
+    const header = `
+      <div class="flex items-center gap-2 mb-2">
+        <select id="diag-filter" class="bg-panel2 border border-border rounded text-xs px-2 py-1 outline-none">
+          <option value="all" ${this.filter==='all'?'selected':''}>Todos (${this.failures.length})</option>
+          <option value="open" ${this.filter==='open'?'selected':''}>Abiertos (${this.failures.filter(f=>!f.resolved).length})</option>
+          <option value="resolved" ${this.filter==='resolved'?'selected':''}>Resueltos (${this.failures.filter(f=>f.resolved).length})</option>
+          ${skillOpts}
+        </select>
+        ${this.failures.some(f => f.resolved) ? `<button id="diag-archive" class="text-xs px-2 py-1 rounded bg-panel2 hover:bg-border" title="Archivar (borrar) los resueltos">archivar resueltos</button>` : ''}
+      </div>`;
+
+    if (list.length === 0) {
+      panel.innerHTML = header + `<div class="text-xs text-muted">Sin entradas para el filtro actual.</div>
         <div class="mt-3 text-xs text-muted leading-snug">
           Truco del podcast: cuando una skill falla, NO te frustres. Pregúntale al agente <i>"por qué fallaste?"</i>. Esa respuesta es oro: alimenta el fix, y dile <i>"actualiza la skill para que no vuelva a pasar"</i>.
         </div>`;
+      this._wireHeader();
       return;
     }
-    panel.innerHTML = this.failures.map(f => {
+    panel.innerHTML = header + list.map(f => {
       const skill = SkillsStore.get(f.skillId);
       return `
       <div class="bg-panel2 border ${f.resolved ? 'border-success/30' : 'border-warn/30'} rounded p-2 mb-2 text-xs">
@@ -107,6 +128,7 @@ window.Diagnostics = {
         ` : ''}
       </div>`;
     }).join('');
+    this._wireHeader();
     panel.querySelectorAll('button[data-action]').forEach(b => {
       b.onclick = () => {
         const id = b.dataset.id;
@@ -114,6 +136,19 @@ window.Diagnostics = {
         if (b.dataset.action === 'apply') this.applyFix(id);
       };
     });
+  },
+
+  _wireHeader() {
+    const sel = document.getElementById('diag-filter');
+    if (sel) sel.onchange = e => { this.filter = e.target.value; this.render(); };
+    const arch = document.getElementById('diag-archive');
+    if (arch) arch.onclick = () => {
+      const n = this.failures.filter(f => f.resolved).length;
+      if (!confirm(`Archivar ${n} diagnósticos resueltos? (se borran del historial)`)) return;
+      this.failures = this.failures.filter(f => !f.resolved);
+      this.persist();
+      this.render();
+    };
   },
 
   _askAgentForFix(id) {

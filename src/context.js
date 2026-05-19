@@ -67,6 +67,27 @@ window.Context = {
       `${formatTokens(total)} / ${formatTokens(window.CTX_LIMIT)}`;
     document.getElementById('status-right').textContent = `tokens: ${formatTokens(total)}`;
 
+    // Densidad de información en el status bar para power users
+    const loaded = SkillsStore.skills.filter(s => s.loaded).length;
+    const totalSkills = SkillsStore.skills.length;
+    const subs = AgentsStore.agents.filter(a => a.type === 'sub').length;
+    const mem = MemoryStore.items.length;
+    const openDiag = window.Diagnostics ? Diagnostics.failures.filter(f => !f.resolved).length : 0;
+    const show = (id, val, formatter) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (val > 0 || (id === 'status-skills' && totalSkills > 0)) {
+        el.classList.remove('hidden');
+        el.textContent = formatter(val);
+      } else el.classList.add('hidden');
+    };
+    show('status-skills', loaded, v => `⌗ ${v}/${totalSkills}`);
+    show('status-agents', subs, v => `▼ ${v}`);
+    show('status-memory', mem, v => `🧠 ${v}`);
+    show('status-diag', openDiag, v => `⚠ ${v}`);
+    const diagEl = document.getElementById('status-diag');
+    if (diagEl && openDiag > 0) diagEl.classList.add('text-warn');
+
     const panel = document.getElementById('ctx-breakdown');
     if (panel) {
       panel.innerHTML = `

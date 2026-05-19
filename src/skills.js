@@ -55,15 +55,26 @@ window.SkillsStore = {
       .reduce((sum, s) => sum + estimateTokens(s.body), 0);
   },
 
+  filter: '',
+
   render() {
     const ul = document.getElementById('skills-list');
     if (!ul) return;
+    let list = this.skills;
+    if (this.filter) {
+      const q = this.filter.toLowerCase();
+      list = list.filter(s =>
+        s.name.toLowerCase().includes(q) ||
+        (s.description || '').toLowerCase().includes(q));
+    }
     ul.innerHTML = '';
-    if (this.skills.length === 0) {
-      ul.innerHTML = '<li class="text-xs text-muted">Aún no tienes skills. Construye uno desde un workflow real, no lo descargues de internet.</li>';
+    if (list.length === 0) {
+      ul.innerHTML = this.filter
+        ? `<li class="text-xs text-muted">Sin resultados para "${escapeHtml(this.filter)}".</li>`
+        : '<li class="text-xs text-muted">Aún no tienes skills. Construye uno desde un workflow real, no lo descargues de internet.</li>';
       return;
     }
-    for (const s of this.skills) {
+    for (const s of list) {
       const li = document.createElement('li');
       li.className = 'skill-card' + (s.loaded ? ' loaded' : '') + (s.expandOnRender ? ' expanded' : '');
       if (s.expandOnRender) s.expandOnRender = false;
