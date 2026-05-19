@@ -155,12 +155,7 @@ window.Diagnostics = {
     const f = this.failures.find(x => x.id === id);
     if (!f) return;
     const skill = SkillsStore.get(f.skillId);
-    const proposals = {
-      'sponsor-research': 'añadir check de "exposición sin dinero" como rechazo automático',
-      'weekly-report': 'marcar fuente como "n/a" en lugar de abortar cuando devuelve 429',
-      'code-structure': 'no extraer helpers cuando solo hay 3 ocurrencias similares'
-    };
-    const proposed = proposals[f.skillId] || `revisar paso donde falla "${f.symptom}"`;
+    const proposed = this._proposalFor(f);
     setTimeout(() => {
       this.proposeFix(id, proposed);
       MockAgent.log('agent',
@@ -170,5 +165,18 @@ window.Diagnostics = {
         `Aplica el fix desde el panel de Diagnóstico para añadirlo permanentemente a la skill.`,
         `agente · diagnóstico`);
     }, 600);
+  },
+
+  _proposalFor(f) {
+    // Si vino de dispatch paralelo, el síntoma describe ambigüedad, no la skill.
+    if (/dispatch paralelo|dispatch parallel/i.test(f.symptom)) {
+      return 'aclarar la tarea de dispatch en el system prompt del sub-agente (los modelos pierden contexto cuando la tarea es ambigua o genérica)';
+    }
+    const proposals = {
+      'sponsor-research': 'añadir check de "exposición sin dinero" como rechazo automático',
+      'weekly-report': 'marcar fuente como "n/a" en lugar de abortar cuando devuelve 429',
+      'code-structure': 'no extraer helpers cuando solo hay 3 ocurrencias similares'
+    };
+    return proposals[f.skillId] || `revisar paso donde falla "${f.symptom}"`;
   }
 };

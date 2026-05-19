@@ -19,15 +19,19 @@ window.Demo = {
     await MockAgent.send('investiga el patrocinador acme.io');
     await $(1200);
 
-    // 2. Skill que falla con probabilidad alta
-    AgentsStore.add({
-      id: 'demo-research-' + Date.now(),
-      name: 'research',
-      role: 'fact-checking, due diligence',
-      type: 'sub',
-      skills: ['sponsor-research'],
-      productivityScore: 0.7
-    });
+    // 2. Skill que falla con probabilidad alta.
+    // Idempotente: si ya existe un sub-agente "research", lo reutilizamos
+    // en vez de crear duplicado en cada demo.
+    if (!AgentsStore.agents.some(a => a.name === 'research')) {
+      AgentsStore.add({
+        id: 'demo-research',
+        name: 'research',
+        role: 'fact-checking, due diligence',
+        type: 'sub',
+        skills: ['sponsor-research'],
+        productivityScore: 0.7
+      });
+    }
     await $(500);
 
     // 3. Dispatch paralelo

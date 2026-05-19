@@ -44,11 +44,19 @@ window.MemoryStore = {
   },
 
   // Recupera ítems de memoria relevantes a un texto, simulando un retrieval.
+  // Aliases bidireccionales. Si una palabra de la query contiene alguno
+  // de estos roots, expandimos a sus sinónimos antes de buscar en memoria.
   ALIASES: {
     'patrocin': ['sponsor', 'brand', 'auspici', 'colabora'],
-    'sponsor': ['patrocin', 'auspici'],
-    'horario': ['hora', 'tiempo', 'zona', 'timezone'],
-    'zona': ['horaria', 'timezone'],
+    'sponsor':  ['patrocin', 'auspici', 'brand', 'colabora'],
+    'auspici':  ['patrocin', 'sponsor', 'brand', 'colabora'],
+    'brand':    ['patrocin', 'sponsor', 'colabora'],
+    'colabora': ['patrocin', 'sponsor', 'brand'],
+    'horario':  ['hora', 'tiempo', 'zona', 'timezone', 'huso'],
+    'zona':     ['horaria', 'timezone', 'huso'],
+    'timezone': ['zona', 'horaria', 'huso'],
+    'reporte':  ['report', 'kpi', 'metric'],
+    'report':   ['reporte', 'kpi', 'metric']
   },
 
   _normalize(s) {

@@ -19,8 +19,22 @@ window.Sycophancy = {
     /buena observación/i
   ],
 
+  // Señales de que la concesión está respaldada con análisis (no es sycophant):
+  // bullets, números, fragmentos de código, fuentes, listas estructuradas.
+  ANALYTICAL: [
+    /^\s*[•\-\*]\s/m,   // bullet en cualquier línea
+    /\b\d+(?:\.\d+)?%/, // porcentaje
+    /<code>/,           // fragmento de código
+    /\d{4,}/,           // número grande (fechas, ids, métricas)
+    /fuente:|source:/i,
+    /<table>|<ul>|<ol>/
+  ],
+
   detect(text) {
-    return this.PATTERNS.some(p => p.test(text));
+    if (!this.PATTERNS.some(p => p.test(text))) return false;
+    // Si la respuesta tiene estructura analítica, no es sycophancy pura
+    if (this.ANALYTICAL.some(p => p.test(text))) return false;
+    return true;
   },
 
   // Cuando se detecta sycophancy en una respuesta del agente, añade un

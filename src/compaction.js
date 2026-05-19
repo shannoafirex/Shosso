@@ -6,12 +6,24 @@
 window.Compaction = {
   threshold: 0.8, // 80%
   auto: true,
+  history: [],
 
   init() {
+    // Restaurar history de sesiones previas (sólo metadata, no contenido)
+    try {
+      const saved = JSON.parse(localStorage.getItem('shosso.compactions') || '[]');
+      this.history = saved.slice(0, 20);
+    } catch { this.history = []; }
     const cb = document.getElementById('cfg-auto-compact');
     if (cb) {
       cb.addEventListener('change', e => { this.auto = e.target.checked; });
     }
+  },
+
+  _persistHistory() {
+    try {
+      localStorage.setItem('shosso.compactions', JSON.stringify(this.history.slice(0, 20)));
+    } catch {}
   },
 
   // Llamado por Context tras cada cambio.
@@ -22,14 +34,15 @@ window.Compaction = {
     if (!badge) return;
     if (pct > 0.7) {
       badge.classList.remove('hidden');
+      const t = (k) => window.I18N ? I18N.t(k) : null;
       if (pct >= 0.9) {
-        badge.textContent = '⚠⚠ degradado · click = thread nuevo';
+        badge.textContent = t('compact.degraded') || '⚠⚠ degradado · click = thread nuevo';
         badge.className = 'ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-danger/20 text-danger animate-pulse cursor-pointer';
       } else if (pct >= this.threshold) {
-        badge.textContent = this.auto ? '⚠ compactando…' : '⚠ click = thread nuevo';
+        badge.textContent = this.auto ? (t('compact.now') || '⚠ compactando…') : (t('compact.click') || '⚠ click = thread nuevo');
         badge.className = 'ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-warn/20 text-warn animate-pulse cursor-pointer';
       } else {
-        badge.textContent = `⚠ ${Math.round(pct*100)}% · cerca del umbral`;
+        badge.textContent = `⚠ ${Math.round(pct*100)}% · ${t('compact.near')?.replace(/^⚠\s*/, '') || 'cerca del umbral'}`;
         badge.className = 'ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-warn/15 text-warn cursor-pointer';
       }
     } else {
@@ -38,20 +51,18 @@ window.Compaction = {
     if (pct >= this.threshold && this.auto) this.compact();
   },
 
-  history: [],
-
   compact() {
     if (Context.conversationTokens < 2000) return;
     const before = Context.conversationTokens;
     const compressed = Math.round(before * 0.3);
     const saved = before - compressed;
     Context.conversationTokens = compressed;
-    // Captura un resumen mock de lo que se compactó (visible bajo demanda).
     const summary = this._summarize(before);
     this.history.unshift({
       ts: Date.now(), before, after: compressed, saved, summary
     });
     if (this.history.length > 20) this.history.pop();
+    this._persistHistory();
     Context.log(`Compactación automática: conversación ${before}t → ${compressed}t (ahorro ${saved}t)`);
     const detailId = 'cmp-' + Date.now();
     MockAgent.log('system',

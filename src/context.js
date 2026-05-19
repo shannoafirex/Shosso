@@ -122,6 +122,7 @@ window.Context = {
     }
 
     if (window.Compaction) Compaction.evaluate();
+    if (window.Overview) Overview.refresh();
   }
 };
 

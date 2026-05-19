@@ -3,10 +3,27 @@
 // tener que hacer ronda por todos los paneles. Modal compacto.
 
 window.Overview = {
+  currentModal: null,
+
   init() {
     document.getElementById('productivity-score').addEventListener('click', () => this.open());
     document.getElementById('productivity-score').style.cursor = 'pointer';
     document.getElementById('productivity-score').title = 'Click para overview completo del workspace';
+  },
+
+  _refreshTimer: null,
+
+  // Si el modal está abierto y el estado cambia (otra acción del usuario),
+  // refresca los stats sin cerrar el modal. Debounce 400ms para evitar
+  // flicker cuando Context.refresh dispara en ráfaga (turnos rápidos).
+  refresh() {
+    if (!this.currentModal || !document.body.contains(this.currentModal)) return;
+    clearTimeout(this._refreshTimer);
+    this._refreshTimer = setTimeout(() => {
+      if (!this.currentModal || !document.body.contains(this.currentModal)) return;
+      this.currentModal.remove();
+      this.open();
+    }, 400);
   },
 
   open() {
@@ -92,8 +109,10 @@ window.Overview = {
         </div>
       </div>`;
     document.body.appendChild(modal);
-    modal.querySelector('[data-close]').onclick = () => modal.remove();
-    modal.onclick = e => { if (e.target === modal) modal.remove(); };
+    this.currentModal = modal;
+    const close = () => { modal.remove(); this.currentModal = null; };
+    modal.querySelector('[data-close]').onclick = close;
+    modal.onclick = e => { if (e.target === modal) close(); };
 
     const recompute = () => {
       const sub = +modal.querySelector('#ov-sub').value || 0;

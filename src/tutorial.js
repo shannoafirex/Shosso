@@ -93,7 +93,9 @@ window.Tutorial = {
     this.flow = flow;
     this.step = 0;
     this.custom = null;
-    document.getElementById('tutorial').classList.remove('hidden');
+    const modal = document.getElementById('tutorial');
+    modal.classList.remove('hidden');
+    modal.onclick = (e) => { if (e.target === modal) this.close(); };
     this.render();
   },
 

@@ -82,7 +82,7 @@ window.SkillsStore = {
       const bodyTok = estimateTokens(s.body);
       li.innerHTML = `
         <div class="name">
-          <span>${escapeHtml(s.name)}</span>
+          <span title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
           <button class="text-xs text-muted hover:text-white" data-action="toggle-body">▾</button>
         </div>
         <div class="desc">${escapeHtml(s.description)}</div>

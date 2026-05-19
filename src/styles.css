@@ -52,7 +52,8 @@ html, body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", R
 }
 .skill-card:hover { border-color: #2d3543; }
 .skill-card.loaded { border-color: #7c5cff; box-shadow: 0 0 0 1px #7c5cff inset; }
-.skill-card .name { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+.skill-card .name { font-weight: 600; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.skill-card .name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
 .skill-card .desc { font-size: 11px; color: #8a93a6; margin-top: 2px; line-height: 1.35; }
 .skill-card .meta { display:flex; gap: 8px; margin-top: 6px; font-size: 10px; color: #8a93a6; text-transform: uppercase; letter-spacing: 0.04em; }
 .skill-card .meta .pill { background: #161b22; padding: 1px 6px; border-radius: 999px; }

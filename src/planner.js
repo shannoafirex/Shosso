@@ -24,7 +24,9 @@ window.Planner = {
   open() {
     this.step = 0;
     this.draft = { id: 'p' + Date.now(), goal: '', plan: '', prs: [] };
-    document.getElementById('planner-modal').classList.remove('hidden');
+    const modal = document.getElementById('planner-modal');
+    modal.classList.remove('hidden');
+    modal.onclick = (e) => { if (e.target === modal) this.close(); };
     this.renderStep();
   },
 

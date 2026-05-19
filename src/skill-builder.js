@@ -20,7 +20,10 @@ window.SkillBuilder = {
       workflowNotes: [],
       successfulRun: false
     };
-    document.getElementById('skill-builder').classList.remove('hidden');
+    const modal = document.getElementById('skill-builder');
+    modal.classList.remove('hidden');
+    // Backdrop click cierra
+    modal.onclick = (e) => { if (e.target === modal) this.close(); };
     this.render();
   },
 

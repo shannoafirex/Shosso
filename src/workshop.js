@@ -14,8 +14,15 @@ window.Workshop = {
     const grid = document.getElementById('workshop-grid');
     if (!grid) return;
     const subs = AgentsStore.agents.filter(a => a.type === 'sub');
+    // GC: limpia columnas de sub-agentes que ya no existen (evita leaks de
+    // referencias en this.columns Map).
+    const validIds = new Set(subs.map(a => a.id));
+    for (const id of [...this.columns.keys()]) {
+      if (!validIds.has(id)) this.columns.delete(id);
+    }
     if (subs.length === 0) {
       grid.innerHTML = `<div class="text-xs text-muted col-span-full p-2">Sin sub-agentes. Crea al menos uno desde el tab <b>Agentes</b> para usar dispatch paralelo.</div>`;
+      this.columns.clear();
       return;
     }
     grid.innerHTML = '';
