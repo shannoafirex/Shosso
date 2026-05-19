@@ -138,6 +138,7 @@ function renderFileTree() {
 }
 
 function iconFor(path) {
+  if (!path || typeof path !== 'string') return '·';
   if (path.endsWith('.md')) return '📄';
   if (path.endsWith('.js') || path.endsWith('.ts')) return '⚡';
   if (path.endsWith('.json')) return '📋';
@@ -211,6 +212,7 @@ function setupTerminal() {
 }
 
 function detectLang(path) {
+  if (!path || typeof path !== 'string') return 'plaintext';
   if (path.endsWith('.md')) return 'markdown';
   if (path.endsWith('.json')) return 'json';
   if (path.endsWith('.ts') || path.endsWith('.tsx')) return 'typescript';
