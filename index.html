@@ -149,10 +149,10 @@
         <!-- Plan panel -->
         <div data-panel="plan" class="side-panel hidden p-3 space-y-3">
           <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-sm">Planes</h2>
-            <button id="btn-new-plan" class="text-xs px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30">+ Plan</button>
+            <h2 class="font-semibold text-sm" data-i18n="panel.plan.title">Planes</h2>
+            <button id="btn-new-plan" class="text-xs px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30" data-i18n="new.plan">+ Plan</button>
           </div>
-          <p class="text-xs text-muted leading-snug">El plan es para TI — accountability. Después se divide en PRs pequeños que el review loop (<code>/grebloop</code>) puede cerrar.</p>
+          <p class="text-xs text-muted leading-snug" data-i18n="panel.plan.desc">El plan es para TI — accountability. Después se divide en PRs pequeños que el review loop (<code>/grebloop</code>) puede cerrar.</p>
           <div id="plans-list" class="space-y-2"></div>
           <div class="pt-3 border-t border-border">
             <h3 class="text-xs uppercase tracking-wide text-muted mb-2">Comandos rápidos</h3>
@@ -172,20 +172,20 @@
 
         <div data-panel="skills" class="side-panel p-3 space-y-2">
           <div class="flex items-center justify-between mb-2">
-            <h2 class="font-semibold text-sm">Skills disponibles</h2>
+            <h2 class="font-semibold text-sm" data-i18n="panel.skills.title">Skills disponibles</h2>
             <div class="flex gap-1">
-              <button id="btn-new-skill" class="text-xs px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30">+ Skill</button>
+              <button id="btn-new-skill" class="text-xs px-2 py-0.5 rounded bg-accent/20 text-accent hover:bg-accent/30" data-i18n="new.skill">+ Skill</button>
               <button id="btn-import-skill" class="text-xs px-2 py-0.5 rounded bg-panel2 hover:bg-border" title="Importar skill externa">⤓</button>
             </div>
           </div>
-          <p class="text-xs text-muted leading-snug mb-2">Solo nombre + descripción están en contexto. El cuerpo se carga cuando el agente lo necesita (progressive disclosure).</p>
+          <p class="text-xs text-muted leading-snug mb-2" data-i18n="panel.skills.desc">Solo nombre + descripción están en contexto. El cuerpo se carga cuando el agente lo necesita (progressive disclosure).</p>
           <ul id="skills-list" class="space-y-2"></ul>
         </div>
 
         <!-- Agents panel -->
         <div data-panel="agents" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm">Orquesta de agentes</h2>
-          <p class="text-xs text-muted leading-snug">Un agente principal; los sub-agentes solo aparecen cuando aportan productividad real.</p>
+          <h2 class="font-semibold text-sm" data-i18n="panel.agents.title">Orquesta de agentes</h2>
+          <p class="text-xs text-muted leading-snug" data-i18n="panel.agents.desc">Un agente principal; los sub-agentes solo aparecen cuando aportan productividad real.</p>
           <ul id="agents-list" class="space-y-2"></ul>
           <button id="btn-new-agent" class="w-full mt-2 text-xs px-2 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30">+ Sub-agente</button>
           <div id="productivity-warning" class="hidden mt-3 p-2 rounded bg-warn/10 border border-warn/30 text-xs text-warn"></div>
@@ -193,8 +193,8 @@
 
         <!-- Context panel -->
         <div data-panel="context" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm">Composición del contexto</h2>
-          <p class="text-xs text-muted leading-snug">Menos es más. Vigila lo que se inyecta en cada turno.</p>
+          <h2 class="font-semibold text-sm" data-i18n="panel.context.title">Composición del contexto</h2>
+          <p class="text-xs text-muted leading-snug" data-i18n="panel.context.desc">Menos es más. Vigila lo que se inyecta en cada turno.</p>
           <div id="ctx-breakdown" class="space-y-1.5"></div>
           <div class="mt-3 pt-3 border-t border-border">
             <h3 class="text-xs uppercase tracking-wide text-muted mb-2">Política</h3>
@@ -213,8 +213,8 @@
 
         <!-- Memory panel -->
         <div data-panel="memory" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm">Capa de memoria</h2>
-          <p class="text-xs text-muted leading-snug">Hechos persistentes entre sesiones. NO viven en el contexto principal; se recuperan cuando son relevantes (igual que skills, progressive).</p>
+          <h2 class="font-semibold text-sm" data-i18n="panel.memory.title">Capa de memoria</h2>
+          <p class="text-xs text-muted leading-snug" data-i18n="panel.memory.desc">Hechos persistentes entre sesiones. NO viven en el contexto principal; se recuperan cuando son relevantes (igual que skills, progressive).</p>
           <div id="memory-list" class="space-y-2"></div>
           <form id="memory-form" class="flex gap-1 mt-2">
             <input id="memory-input" placeholder="Anota un hecho persistente…" class="flex-1 bg-panel2 border border-border rounded px-2 py-1 text-xs outline-none focus:border-accent" />

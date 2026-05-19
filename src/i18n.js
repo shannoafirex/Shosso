@@ -36,7 +36,21 @@ window.I18N = {
       'new.skill': '+ Skill',
       'new.plan': '+ Plan',
       'new.agent': '+ Sub-agente',
-      'ready': 'Listo'
+      'ready': 'Listo',
+      'panel.skills.title': 'Skills disponibles',
+      'panel.skills.desc': 'Solo nombre + descripción están en contexto. El cuerpo se carga cuando el agente lo necesita (progressive disclosure).',
+      'panel.agents.title': 'Orquesta de agentes',
+      'panel.agents.desc': 'Un agente principal; los sub-agentes solo aparecen cuando aportan productividad real.',
+      'panel.plan.title': 'Planes',
+      'panel.plan.desc': 'El plan es para TI — accountability. Después se divide en PRs pequeños que el review loop puede cerrar.',
+      'panel.context.title': 'Composición del contexto',
+      'panel.context.desc': 'Menos es más. Vigila lo que se inyecta en cada turno.',
+      'panel.memory.title': 'Capa de memoria',
+      'panel.memory.desc': 'Hechos persistentes entre sesiones. NO viven en el contexto principal; se recuperan cuando son relevantes.',
+      'panel.tokens.title': 'Tokenizador',
+      'panel.system.title': 'System prompt + harness',
+      'panel.security.title': 'Postura de seguridad',
+      'panel.philosophy.title': 'Filosofía'
     },
     en: {
       'tagline': 'skill-first IDE · context-aware',
@@ -67,7 +81,21 @@ window.I18N = {
       'new.skill': '+ Skill',
       'new.plan': '+ Plan',
       'new.agent': '+ Sub-agent',
-      'ready': 'Ready'
+      'ready': 'Ready',
+      'panel.skills.title': 'Available skills',
+      'panel.skills.desc': 'Only name + description live in context. The body loads on demand when the agent needs it (progressive disclosure).',
+      'panel.agents.title': 'Agent orchestra',
+      'panel.agents.desc': 'One main agent; sub-agents only appear when they add real productivity.',
+      'panel.plan.title': 'Plans',
+      'panel.plan.desc': 'The plan is for YOU — accountability. Then split into small PRs that the review loop can close.',
+      'panel.context.title': 'Context composition',
+      'panel.context.desc': 'Less is more. Watch what gets injected each turn.',
+      'panel.memory.title': 'Memory layer',
+      'panel.memory.desc': 'Persistent facts across sessions. They do NOT live in main context; retrieved only when relevant.',
+      'panel.tokens.title': 'Tokenizer',
+      'panel.system.title': 'System prompt + harness',
+      'panel.security.title': 'Security posture',
+      'panel.philosophy.title': 'Philosophy'
     }
   },
 

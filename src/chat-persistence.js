@@ -37,9 +37,10 @@ window.ChatPersistence = {
       div.className = `msg msg-${m.role}`;
       div.innerHTML = (m.meta ? `<div class="meta">${escapeHtml(m.meta)}</div>` : '') + m.html;
       wrap.appendChild(div);
+      this._rehydrate(div, m);
     }
     wrap.scrollTop = wrap.scrollHeight;
-    // Añade banner discreto
+    // Banner discreto
     const banner = document.createElement('div');
     banner.className = 'msg msg-system';
     banner.innerHTML = `📂 Sesión restaurada · <b>${list.length}</b> mensajes <button id="clear-history" class="ml-2 text-[10px] underline text-warn hover:text-danger">borrar historial</button>`;
@@ -48,7 +49,22 @@ window.ChatPersistence = {
       this.clear();
       wrap.innerHTML = '';
       Context.log('Historial de chat borrado.');
+      if (typeof greet === 'function') greet();
     };
     return true;
+  },
+
+  // Re-asocia onclick handlers en mensajes restaurados (chips, desafiar, …).
+  // Sin esto, los botones del chat persistido quedan visuales pero muertos.
+  _rehydrate(div, m) {
+    // Example chips
+    div.querySelectorAll('.example-chip[data-text]').forEach(b => {
+      b.addEventListener('click', () => MockAgent.send(b.dataset.text));
+    });
+    // Banner sycophancy (re-detectar y re-asociar)
+    if (m.role === 'agent' && window.Sycophancy) Sycophancy.wrap(div, m.html);
+    // clear-history button del banner anterior (si quedó en historial — no debería)
+    const ch = div.querySelector('#clear-history');
+    if (ch) ch.remove();
   }
 };
