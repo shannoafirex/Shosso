@@ -62,7 +62,7 @@ window.Projects = {
     if (!pill) return;
     const current = this.getCurrent();
     const project = this.list().find(p => p.id === current);
-    const name = project ? project.name : current;
+    const name = (project && project.name) || current || 'default';
     pill.innerHTML = `<span class="text-muted">📁</span> ${escapeHtml(name)} <span class="text-muted">▾</span>`;
     pill.onclick = () => this.openMenu();
   },
@@ -79,12 +79,14 @@ window.Projects = {
           <button data-close class="text-muted hover:text-white">✕</button>
         </div>
         <div class="p-2 max-h-72 overflow-y-auto">
-          ${projects.map(p => `
+          ${projects.map(p => {
+            const displayName = p.name || p.id || 'sin nombre';
+            return `
             <button data-id="${escapeHtml(p.id)}" class="proj-item w-full text-left px-2 py-1.5 rounded text-xs hover:bg-panel2 flex justify-between items-center ${p.id === current ? 'bg-panel2' : ''}">
-              <span>${escapeHtml(p.name)}${p.id === current ? ' <span class="text-success">●</span>' : ''}</span>
+              <span>${escapeHtml(displayName)}${p.id === current ? ' <span class="text-success">●</span>' : ''}</span>
               ${p.id !== current && p.id !== 'default' ? `<span class="proj-delete text-muted hover:text-danger" data-del="${escapeHtml(p.id)}" title="Borrar">✕</span>` : ''}
             </button>
-          `).join('')}
+          `;}).join('')}
         </div>
         <div class="border-t border-border p-2 flex gap-1">
           <button id="proj-new" class="flex-1 text-xs px-2 py-1.5 rounded bg-accent/20 text-accent hover:bg-accent/30">+ Nuevo</button>

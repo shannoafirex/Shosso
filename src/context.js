@@ -127,7 +127,10 @@ window.Context = {
 };
 
 function formatTokens(n) {
+  // Defensive: si por algún flujo n es NaN o no-numeric, devuelve "0"
+  // en vez de mostrar "NaN" visible al usuario.
+  if (typeof n !== 'number' || isNaN(n) || !isFinite(n)) return '0';
   if (n >= 1000) return (n / 1000).toFixed(n >= 10000 ? 0 : 1) + 'k';
-  return String(n);
+  return String(Math.round(n));
 }
 window.formatTokens = formatTokens;
