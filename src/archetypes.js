@@ -273,8 +273,20 @@ window.Archetypes = {
   },
 
   _showDetail(id, parentModal, isCustom = false) {
-    const a = (isCustom ? this._customs() : this.LIST).find(x => x.id === id);
-    if (!a) return;
+    const raw = (isCustom ? this._customs() : this.LIST).find(x => x.id === id);
+    if (!raw) return;
+    // Defensive: customs importados de JSON pueden tener campos ausentes
+    const a = {
+      ...raw,
+      skills: Array.isArray(raw.skills) ? raw.skills : [],
+      subAgents: Array.isArray(raw.subAgents) ? raw.subAgents : [],
+      memory: Array.isArray(raw.memory) ? raw.memory : [],
+      plan: raw.plan && typeof raw.plan === 'object' ? raw.plan : { goal: '', tag: 'engineering', prs: [] },
+      icon: raw.icon || '⭐',
+      tagline: raw.tagline || '',
+      name: raw.name || '(sin nombre)'
+    };
+    a.plan.prs = Array.isArray(a.plan.prs) ? a.plan.prs : [];
     parentModal.querySelector('.arch-card[data-id="' + id + '"]')?.scrollIntoView();
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4';
@@ -393,7 +405,18 @@ window.Archetypes = {
 
   // Aplica el archetype additive: añade skills/agentes/memoria/plan
   // que no existen ya. No clobera.
-  apply(a) {
+  apply(raw) {
+    // Defensive normalize — apply puede ser llamado desde _showDetail con
+    // a ya normalizado, o desde código que pasa raw archetype.
+    const a = {
+      ...raw,
+      skills: Array.isArray(raw.skills) ? raw.skills : [],
+      subAgents: Array.isArray(raw.subAgents) ? raw.subAgents : [],
+      memory: Array.isArray(raw.memory) ? raw.memory : [],
+      plan: raw.plan && typeof raw.plan === 'object' ? raw.plan : null,
+      name: raw.name || '(sin nombre)',
+      id: raw.id || 'unknown'
+    };
     let report = { skills: 0, agents: 0, memory: 0, plans: 0, missing: [] };
 
     // Skills: las del archetype suelen estar como seed. Si no, intentamos
@@ -440,29 +463,33 @@ window.Archetypes = {
     MemoryStore.persist();
     MemoryStore.render();
 
-    // Plan: agregar como nuevo plan (no merge).
-    const planObj = {
-      id: 'p-arch-' + a.id + '-' + Date.now(),
-      goal: a.plan.goal,
-      plan: 'Generado desde archetype "' + a.name + '".',
-      prs: a.plan.prs.map(p => ({ ...p, status: 'pending' })),
-      tag: a.plan.tag,
-      savedAt: Date.now()
-    };
-    const plans = SafeStorage.safeGet('shosso.plans', []);
-    plans.unshift(planObj);
-    SafeStorage.safeSet('shosso.plans', plans.slice(0, 50));
-    if (window.Planner) Planner.renderRecent();
-    report.plans = 1;
+    // Plan: agregar como nuevo plan si el archetype tiene uno.
+    if (a.plan && a.plan.goal) {
+      const planObj = {
+        id: 'p-arch-' + a.id + '-' + Date.now(),
+        goal: a.plan.goal,
+        plan: 'Generado desde archetype "' + a.name + '".',
+        prs: (Array.isArray(a.plan.prs) ? a.plan.prs : []).map(p => ({ ...p, status: 'pending' })),
+        tag: a.plan.tag || 'engineering',
+        savedAt: Date.now()
+      };
+      const plans = SafeStorage.safeGet('shosso.plans', []);
+      plans.unshift(planObj);
+      SafeStorage.safeSet('shosso.plans', plans.slice(0, 50));
+      if (window.Planner) Planner.renderRecent();
+      report.plans = 1;
+    }
 
     // Sumario en chat
     const missingNote = report.missing.length > 0
       ? `<br><span class="text-warn text-xs">⚠ ${report.missing.length} skill(s) referenciadas no encontradas en seed ni en workspace: ${report.missing.slice(0, 4).map(escapeHtml).join(', ')}${report.missing.length > 4 ? '…' : ''}. Crea esas skills manualmente si las necesitas.</span>`
       : '';
+    const planHint = (a.plan && a.plan.goal)
+      ? `<br><span class="text-muted text-xs">Empieza por el plan: panel <b>Plan</b> → ${escapeHtml(a.plan.goal.slice(0, 60))}…</span>`
+      : '';
     MockAgent.log('system',
       `✦ <b>Archetype aplicado: ${escapeHtml(a.name)}</b><br>` +
-      `• ${report.skills} skills añadidas · ${report.agents} sub-agentes · ${report.memory} hechos de memoria · ${report.plans} plan${missingNote}<br>` +
-      `<span class="text-muted text-xs">Empieza por el plan: panel <b>Plan</b> → ${escapeHtml(a.plan.goal.slice(0, 60))}…</span>`);
+      `• ${report.skills} skills añadidas · ${report.agents} sub-agentes · ${report.memory} hechos de memoria · ${report.plans} plan${missingNote}${planHint}`);
     Context.log(`Archetype "${a.name}" aplicado.`);
     if (window.Productivity) Productivity.refresh();
   }
