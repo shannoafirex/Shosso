@@ -50,6 +50,9 @@ window.Editor = {
         document.addEventListener('shosso:rootChanged', () => this._renderFileTree());
         document.getElementById('ft-refresh').onclick = () => this._renderFileTree();
         document.getElementById('ft-new-file').onclick = () => this._newFile();
+        // External edits (vim, agent CLI, etc.) won't fire fileWritten.
+        // On window focus, re-stat open files and prompt if disk drifted.
+        window.addEventListener('focus', () => this._checkDiskDrift());
         resolve();
       });
     });
@@ -63,10 +66,28 @@ window.Editor = {
       json: 'json', md: 'markdown', html: 'html', css: 'css',
       py: 'python', rb: 'ruby', go: 'go', rs: 'rust',
       sh: 'shell', yml: 'yaml', yaml: 'yaml', xml: 'xml',
-      java: 'java', c: 'c', cpp: 'cpp', h: 'cpp',
-      sql: 'sql'
+      java: 'java', c: 'c', cpp: 'cpp', cc: 'cpp', cxx: 'cpp', hpp: 'cpp', h: 'cpp',
+      sql: 'sql',
+      vue: 'html', svelte: 'html',
+      toml: 'ini', ini: 'ini',
+      lua: 'lua', swift: 'swift', kt: 'kotlin', php: 'php',
+      scss: 'scss', less: 'less'
     };
     return map[ext] || 'plaintext';
+  },
+
+  _setStatusFile(p) {
+    const el = document.getElementById('status-file');
+    if (!el) return;
+    if (!p) { el.textContent = ''; el.title = ''; return; }
+    // Truncate long paths from the middle so both project context and
+    // filename remain visible; keep full path in title for hover.
+    const MAX = 64;
+    if (p.length <= MAX) { el.textContent = p; el.title = p; return; }
+    const head = p.slice(0, 20);
+    const tail = p.slice(-(MAX - 20 - 1));
+    el.textContent = head + '…' + tail;
+    el.title = p;
   },
 
   async openPath(filePath) {
@@ -90,14 +111,44 @@ window.Editor = {
     }
     this.active = entry;
     this.monaco.setModel(entry.model);
-    document.getElementById('status-file').textContent = filePath;
+    this._setStatusFile(filePath);
     this._renderTabs();
   },
 
+  async _checkDiskDrift() {
+    // Serialize: avoid stacking checks if focus fires rapidly.
+    if (this._driftBusy) return;
+    this._driftBusy = true;
+    try {
+      // Snapshot to avoid reacting to entries closed mid-iteration.
+      const snapshot = this.open.slice();
+      for (const f of snapshot) {
+        if (!this.open.includes(f)) continue;
+        const st = await window.shosso.fs.stat(f.path);
+        if (!st || st.error || !st.mtime) continue;
+        if (f.mtime && st.mtime === f.mtime) continue;
+        if (!f.mtime) { f.mtime = st.mtime; continue; }
+        if (f.dirty) {
+          if (confirm('"' + f.path + '" cambió en disco y tienes cambios sin guardar. ¿Sobrescribir con la versión del disco?')) {
+            await this.reloadFromDisk(f.path);
+          } else {
+            // Mark new baseline so we don't ask again until next change.
+            f.mtime = st.mtime;
+          }
+        } else {
+          await this.reloadFromDisk(f.path);
+        }
+      }
+    } finally {
+      this._driftBusy = false;
+    }
+  },
+
   async reloadFromDisk(filePath) {
-    const f = this.open.find(o => o.path === filePath);
+    const np = normPath(filePath);
+    const f = this.open.find(o => normPath(o.path) === np);
     if (!f) return;
-    const r = await window.shosso.fs.readFile(filePath);
+    const r = await window.shosso.fs.readFile(f.path);
     if (r.error) return;
     f.model.setValue(r.content);
     f.dirty = false;
@@ -129,17 +180,32 @@ window.Editor = {
   },
 
   close(filePath) {
-    const idx = this.open.findIndex(o => o.path === filePath);
+    const np = normPath(filePath);
+    const idx = this.open.findIndex(o => normPath(o.path) === np);
     if (idx < 0) return;
     const f = this.open[idx];
     if (f.dirty && !confirm('Descartar cambios en ' + filePath + '?')) return;
-    f.model.dispose();
+    const wasActive = this.active === f;
+    // Decide successor *before* mutating; splice first so we don't pick the
+    // closed entry itself, then dispose only after Monaco has been swapped
+    // off the disposed model — avoids "model is disposed" in pending events.
     this.open.splice(idx, 1);
-    if (this.active === f) {
+    if (wasActive) {
       this.active = this.open[idx] || this.open[idx - 1] || null;
-      if (this.active) { this.monaco.setModel(this.active.model); document.getElementById('status-file').textContent = this.active.path; }
-      else { this.monaco.setModel(monaco.editor.createModel('', 'plaintext')); document.getElementById('status-file').textContent = ''; }
+      if (this.active) {
+        this.monaco.setModel(this.active.model);
+        this._setStatusFile(this.active.path);
+      } else {
+        if (!this._emptyModel || this._emptyModel.isDisposed()) {
+          this._emptyModel = monaco.editor.createModel('', 'plaintext');
+        } else {
+          this._emptyModel.setValue('');
+        }
+        this.monaco.setModel(this._emptyModel);
+        this._setStatusFile('');
+      }
     }
+    try { f.model.dispose(); } catch (_) { /* model may already be gone */ }
     this._renderTabs();
   },
 

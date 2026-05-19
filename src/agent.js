@@ -146,7 +146,9 @@ window.Agent = {
     // Loop until the model stops calling tools.
     let iterations = 0;
     const maxIter = 25;
-    while (iterations++ < maxIter) {
+    let hitMaxIter = false;
+    while (iterations < maxIter) {
+      iterations++;
       this.currentRunId = 'run-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
       this.abortRequested = false;
       this.setRunStatus('Pensando…');
@@ -210,11 +212,19 @@ window.Agent = {
       }
       this._streamingEl = null;
 
-      // Execute tools sequentially; collect tool_result blocks
+      // Execute tools sequentially; collect tool_result blocks.
+      // INVARIANT: every tool_use in the assistant turn must have a paired
+      // tool_result, otherwise the next API request is malformed. If the user
+      // aborts mid-batch, we still emit a synthetic 'aborted' result for the
+      // remaining tools so the conversation stays consistent.
       const toolResults = [];
       for (const tu of toolUses) {
+        if (this.abortRequested) {
+          toolResults.push({ tool_use_id: tu.id, name: tu.name, result: { error: 'aborted by user' } });
+          continue;
+        }
         this.setRunStatus(`tool: ${tu.name}`);
-        const argsPreview = JSON.stringify(tu.input).slice(0, 200);
+        const argsPreview = JSON.stringify(tu.input ?? {}).slice(0, 200);
         this.appendChat('tool', `<b>${escapeHtml(tu.name)}</b>(<code class="text-[10px]">${escapeHtml(argsPreview)}</code>)`, 'tool call');
         let result;
         try { result = await Tools.execute(tu.name, tu.input); }
@@ -237,10 +247,16 @@ window.Agent = {
       });
       // Loop continues — model will see tool outputs and respond.
       if (this.abortRequested) break;
+      if (iterations >= maxIter) { hitMaxIter = true; break; }
+    }
+
+    if (hitMaxIter) {
+      this.appendChat('system', `⚠ Se alcanzó el límite de ${maxIter} iteraciones de tools en este turno. El agente se detuvo. Pídele que continúe si es necesario.`);
     }
 
     this.setRunStatus(null);
     this.currentRunId = null;
+    this._streamingEl = null;
     Context.refresh();
     await Compaction.maybeAuto();
   },
@@ -248,34 +264,65 @@ window.Agent = {
   // Build messages array in the format the chosen provider expects.
   _messagesFor(provider) {
     if (provider === 'anthropic') {
-      return Context.conversation.map(m => ({
-        role: m.role,
-        content: m.content
-      }));
+      // Filter out tool_result blocks whose tool_use_id wasn't emitted by a
+      // preceding assistant message — Anthropic rejects those as orphans.
+      const knownIds = new Set();
+      const out = [];
+      for (const m of Context.conversation) {
+        let content = m.content;
+        if (m.role === 'assistant' && Array.isArray(content)) {
+          for (const b of content) if (b && b.type === 'tool_use' && b.id) knownIds.add(b.id);
+        } else if (m.role === 'user' && Array.isArray(content)) {
+          const filtered = content.filter(b => {
+            if (!b || b.type !== 'tool_result') return true;
+            return b.tool_use_id && knownIds.has(b.tool_use_id);
+          });
+          if (filtered.length === 0) continue; // skip messages that became empty
+          content = filtered;
+        }
+        out.push({ role: m.role, content });
+      }
+      return out;
     }
     // OpenAI: role 'user'/'assistant'/'tool'. Convert assistant blocks with
     // tool_use into assistant messages with `tool_calls`. tool_result blocks
-    // become role='tool' messages.
+    // become role='tool' messages. We track which tool_call ids have been
+    // emitted so that orphan tool_result blocks (referencing an unknown
+    // tool_use_id) get dropped — otherwise the API rejects the request.
     const out = [];
+    const knownToolCallIds = new Set();
     for (const m of Context.conversation) {
       if (m.role === 'assistant' && Array.isArray(m.content)) {
         const text = m.content.filter(b => b.type === 'text').map(b => b.text).join('');
-        const toolCalls = m.content.filter(b => b.type === 'tool_use').map(b => ({
-          id: b.id, type: 'function',
-          function: { name: b.name, arguments: JSON.stringify(b.input || {}) }
-        }));
+        const toolCalls = m.content
+          .filter(b => b.type === 'tool_use' && b.id && b.name)
+          .map(b => ({
+            id: b.id, type: 'function',
+            function: { name: b.name, arguments: JSON.stringify(b.input || {}) }
+          }));
+        for (const tc of toolCalls) knownToolCallIds.add(tc.id);
         // OpenAI allows content:null only if tool_calls is present.
         // Otherwise we must use empty string to keep the message valid.
+        // Skip wholly empty assistant messages (no text, no tool_calls) —
+        // they are illegal in the OpenAI schema.
+        if (!text && toolCalls.length === 0) continue;
         const msg = { role: 'assistant', content: text || (toolCalls.length ? null : '') };
         if (toolCalls.length) msg.tool_calls = toolCalls;
         out.push(msg);
       } else if (m.role === 'user' && Array.isArray(m.content)) {
-        // tool_result blocks → role='tool'
+        // tool_result blocks → role='tool'. Non-tool_result blocks under a
+        // user role (e.g. image, plain text) get coalesced into a regular
+        // user message so we don't silently drop user input.
+        const stray = [];
         for (const b of m.content) {
-          if (b.type === 'tool_result') {
+          if (b && b.type === 'tool_result') {
+            if (!b.tool_use_id || !knownToolCallIds.has(b.tool_use_id)) continue; // orphan
             out.push({ role: 'tool', tool_call_id: b.tool_use_id, content: typeof b.content === 'string' ? b.content : JSON.stringify(b.content) });
+          } else if (b && b.type === 'text' && typeof b.text === 'string') {
+            stray.push(b.text);
           }
         }
+        if (stray.length) out.push({ role: 'user', content: stray.join('\n') });
       } else {
         out.push({ role: m.role, content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content) });
       }
@@ -316,14 +363,27 @@ window.Agent = {
         conv.map(m => `[${m.role}] ${typeof m.content === 'string' ? m.content : JSON.stringify(m.content).slice(0, 1000)}`).join('\n\n')
       }
     ];
-    const res = await window.shosso.llm.run({
-      runId: 'compact-' + Date.now(),
-      provider, model, system: 'Eres un resumidor preciso de conversaciones técnicas.',
-      messages, tools: [], maxTokens: 1024
-    });
-    if (res.error) throw new Error(res.error);
-    const text = (res.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
-    return text || '(sin resumen)';
+    // Expose the compaction runId so the user can abort it via this.abort().
+    const runId = 'compact-' + Date.now();
+    const prevRunId = this.currentRunId;
+    this.currentRunId = runId;
+    let res;
+    try {
+      res = await window.shosso.llm.run({
+        runId,
+        provider, model, system: 'Eres un resumidor preciso de conversaciones técnicas.',
+        messages, tools: [], maxTokens: 1024
+      });
+    } finally {
+      // Only restore if nothing else hijacked currentRunId in the meantime.
+      if (this.currentRunId === runId) this.currentRunId = prevRunId;
+    }
+    if (res?.error) throw new Error(res.error);
+    // Account for the compaction's token cost so the bar reflects reality.
+    if (res?.usage) Context.setUsage(res.usage);
+    const text = (res?.content || []).filter(b => b.type === 'text').map(b => b.text).join('\n');
+    if (!text) throw new Error('respuesta vacía del resumidor');
+    return text;
   }
 };
 
