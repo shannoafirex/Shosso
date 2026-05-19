@@ -213,7 +213,23 @@ window.Archetypes = {
   },
 
   _all() {
-    return [...this.LIST, ...this._customs().map(c => ({ ...c, custom: true }))];
+    // Customs vienen de localStorage; pueden estar malformados tras
+    // import desde JSON o tampering. Normalizamos defensive para que
+    // openPicker/_showDetail no crasheen en .skills.length, etc.
+    const normalizeCustom = (c) => ({
+      ...c,
+      custom: true,
+      skills: Array.isArray(c.skills) ? c.skills : [],
+      subAgents: Array.isArray(c.subAgents) ? c.subAgents : [],
+      memory: Array.isArray(c.memory) ? c.memory : [],
+      plan: c.plan && typeof c.plan === 'object'
+        ? { ...c.plan, prs: Array.isArray(c.plan.prs) ? c.plan.prs : [] }
+        : { goal: '', tag: 'engineering', prs: [] },
+      icon: c.icon || '⭐',
+      tagline: c.tagline || '',
+      name: c.name || '(sin nombre)'
+    });
+    return [...this.LIST, ...this._customs().map(normalizeCustom)];
   },
 
   openPicker() {
@@ -379,9 +395,11 @@ window.Archetypes = {
     const plans = SafeStorage.safeGet('shosso.plans', []);
     const lastPlan = plans[0];
     const plan = lastPlan ? {
-      goal: lastPlan.goal,
+      goal: lastPlan.goal || 'Workspace template',
       tag: lastPlan.tag || 'engineering',
-      prs: lastPlan.prs.map(p => ({ title: p.title, body: p.body }))
+      prs: Array.isArray(lastPlan.prs)
+        ? lastPlan.prs.map(p => ({ title: p.title || '', body: p.body || '' }))
+        : []
     } : {
       goal: 'Workspace template',
       tag: 'engineering',
