@@ -51,6 +51,7 @@ function init() {
   NewThread.init();
   KnowledgeWork.init();
   Workshop.init();
+  Metrics.init();
   I18N.init();
   Overview.init();
   Tutorial.init();

@@ -70,6 +70,75 @@ window.KnowledgeWork = {
         <b>Acción:</b> mover 30% del budget paid a partnerships orgánicos.`
     },
     {
+      id: 'investor-update',
+      name: 'Investor update',
+      icon: '📈',
+      desc: 'Update mensual estilo "Lighthouse" en 1 click',
+      cost: '$0 (incluido)', alt: '6h founders + $500 CFO',
+      steps: [
+        { delay: 500, label: 'pulling MRR, churn, NPS de tracker…' },
+        { delay: 700, label: 'cruzando con burn y runway…' },
+        { delay: 600, label: 'identificando wins/lows/asks de las notas…' },
+        { delay: 500, label: 'redactando en tono concise + métricas duras…' }
+      ],
+      run: () => `<b>Investor update — Noviembre:</b><br>
+        <b>Top of funnel</b>: visitas +24%, signups +18%, conversion 4.1%.<br>
+        <b>Revenue</b>: MRR $14.200 (+11% MoM), 47 clientes paying, ARR $170k.<br>
+        <b>Salud</b>: churn 2.1% (logo), NRR 108%, NPS 52.<br>
+        <b>Wins</b>: lanzado tier Business, primer cliente enterprise ($500/mo).<br>
+        <b>Lows</b>: CAC subió a $340 (canales pagos saturados).<br>
+        <b>Asks</b>: warm intro a 3 fondos seed, feedback sobre pricing Business.<br>
+        <b>Runway</b>: 11 meses al burn actual.<br>
+        <span class="text-success">Tiempo: 3min. Comparado con 6h+ founders + draft del CFO.</span>`
+    },
+    {
+      id: 'pricing-analysis',
+      name: 'Análisis de pricing',
+      icon: '💵',
+      desc: 'Compara tiers, elasticidad y propone cambios',
+      cost: '$200/mes', alt: '$3.000-8.000 (consultor pricing)',
+      steps: [
+        { delay: 600, label: 'analizando distribución actual por tier…' },
+        { delay: 800, label: 'comparando vs benchmarks de la categoría…' },
+        { delay: 700, label: 'modelando elasticidad de demanda…' },
+        { delay: 600, label: 'proponiendo cambios y riesgos…' }
+      ],
+      run: () => `<b>Análisis pricing actual:</b><br>
+        • Starter $9 (62% de clientes), Pro $29 (32%), Business $99 (6%).<br>
+        • Median upgrade time: Starter → Pro = 43 días.<br>
+        • <b>Hallazgo:</b> Starter está infravalorado — usuarios usan funcionalidad que en competidores cuesta $19-29.<br>
+        • <b>Benchmark</b>: percentil 50 de tu categoría = $14 entry tier.<br>
+        <br><b>Propuesta:</b><br>
+        1. Subir Starter a $14 (riesgo bajo, +$5/mo × 62 cuentas = +$300/mo).<br>
+        2. Cap features de Starter más agresivo (force upgrade path).<br>
+        3. Grandfather usuarios existentes 6 meses.<br>
+        <span class="text-warn">Riesgo: churn temporal +1-2%. Mitigación: campaña dedicada + valor claro.</span>`
+    },
+    {
+      id: 'churn-cohort',
+      name: 'Reporte cohorte de churn',
+      icon: '📉',
+      desc: 'Cohort + retention curves + causa raíz',
+      cost: '$200/mes', alt: '$1.500-4.000 (data analyst)',
+      steps: [
+        { delay: 700, label: 'extrayendo cohortes por mes de signup…' },
+        { delay: 900, label: 'calculando retention day 7/14/30/90…' },
+        { delay: 800, label: 'cruzando con eventos producto y soporte…' },
+        { delay: 700, label: 'destilando causa raíz por cohorte…' }
+      ],
+      run: () => `<b>Cohort de churn — Q4:</b><br>
+        <table class="text-xs font-mono mt-1">
+          <tr><td class="pr-2">Cohorte</td><td class="pr-2">D7</td><td class="pr-2">D30</td><td>D90</td></tr>
+          <tr><td>Sept</td><td>87%</td><td>72%</td><td>61%</td></tr>
+          <tr><td>Oct</td><td>91%</td><td>78%</td><td>—</td></tr>
+          <tr><td>Nov</td><td>93%</td><td>—</td><td>—</td></tr>
+        </table>
+        <br><b>Causa raíz Sept→Oct:</b> ✓ nuevo onboarding redujo fricción Stripe.<br>
+        <b>Causa raíz Oct→Nov:</b> ✓ welcome email rediseñado mejoró D7.<br>
+        <b>Riesgo Nov D30</b>: subconjunto de power users reporta lag en dashboard (1/3 de la cohorte).<br>
+        <b>Acción</b>: prioridad sprint perf dashboard antes de D30 de cohorte Nov.`
+    },
+    {
       id: 'legal-research',
       name: 'Investigación legal',
       icon: '⚖',

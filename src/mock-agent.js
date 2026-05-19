@@ -306,6 +306,8 @@ window.MockAgent = {
         `<code>/opensource &lt;repo&gt;</code> — clona código de un paquete<br>` +
         `<code>/newthread</code> o <code>/compact</code> — empieza thread limpio<br>` +
         `<code>/dispatch &lt;tarea&gt;</code> — manda en paralelo a todos los sub-agentes<br>` +
+        `<code>/metric &lt;nombre&gt; &lt;valor&gt; [unidad]</code> — tracker SaaS (MRR, churn, NPS…)<br>` +
+        `<code>/incident &lt;descripción&gt;</code> — registra incidente de producción/cliente<br>` +
         `<code>/demo</code> — corre un escenario scripted (mira sin teclear)<br>` +
         `<code>/help</code> — esta lista<br><br>` +
         `<b>Easter eggs:</b> "rundown", "food at home", "am I cooked", "1.8 billion", "vibe vs agentic", "knowledge work", "permanent underclass", "2 semanas".`);
@@ -339,6 +341,40 @@ window.MockAgent = {
     }
     if (cmd === 'compact' || cmd === 'newthread') {
       NewThread.start();
+      return true;
+    }
+    if (cmd === 'metric') {
+      // /metric MRR 12500 [unit]
+      const parts = args.split(/\s+/);
+      const name = parts[0];
+      const value = parts[1];
+      const unit = parts.slice(2).join(' ');
+      if (!name || value === undefined || isNaN(Number(value))) {
+        this.log('agent', `Uso: <code>/metric &lt;nombre&gt; &lt;valor&gt; [unidad]</code>. Ej: <code>/metric MRR 12500</code> o <code>/metric churn 2.1 %</code>.`, 'agente');
+        return true;
+      }
+      const prev = Metrics.getLatest(name);
+      Metrics.set(name, value, unit);
+      const delta = Metrics.delta(name);
+      const deltaStr = delta == null ? '' : ` (${delta > 0 ? '+' : ''}${delta.toFixed(1)}% vs anterior)`;
+      this.log('system',
+        `📊 <b>${escapeHtml(name)}</b> = ${Metrics._formatVal(value)}${unit ? ' ' + escapeHtml(unit) : ''}${deltaStr}<br>` +
+        `<span class="text-muted text-xs">Visible en Overview (click productivity score).</span>`);
+      return true;
+    }
+    if (cmd === 'incident') {
+      if (!args) {
+        this.log('agent', `Uso: <code>/incident &lt;descripción&gt;</code>. Registra un incidente de producción o cliente (separado de skill failures).`, 'agente');
+        return true;
+      }
+      Diagnostics.capture({
+        skillId: '__incident__',
+        symptom: args,
+        diagnosis: 'incidente reportado manualmente (no proviene de skill failure)'
+      });
+      this.log('system',
+        `🚨 <b>Incidente registrado</b>: ${escapeHtml(args)}.<br>` +
+        `<span class="text-muted text-xs">Visible en panel Diagnóstico bajo filtro 'abiertos'. Triage con la skill <code>support-triage</code>.</span>`);
       return true;
     }
     if (cmd === 'dispatch') {

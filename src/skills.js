@@ -56,16 +56,22 @@ window.SkillsStore = {
   },
 
   filter: '',
+  tagFilter: 'all',
 
   render() {
     const ul = document.getElementById('skills-list');
     if (!ul) return;
+    // Renderiza chips de tags arriba (si hay tags)
+    this._renderTagChips();
     let list = this.skills;
     if (this.filter) {
       const q = this.filter.toLowerCase();
       list = list.filter(s =>
         s.name.toLowerCase().includes(q) ||
         (s.description || '').toLowerCase().includes(q));
+    }
+    if (this.tagFilter !== 'all') {
+      list = list.filter(s => (s.tags || []).includes(this.tagFilter));
     }
     ul.innerHTML = '';
     if (list.length === 0) {
@@ -108,6 +114,23 @@ window.SkillsStore = {
       };
       ul.appendChild(li);
     }
+  },
+
+  _renderTagChips() {
+    const wrap = document.getElementById('skills-tags');
+    if (!wrap) return;
+    const allTags = new Set();
+    for (const s of this.skills) (s.tags || []).forEach(t => allTags.add(t));
+    if (allTags.size === 0) { wrap.innerHTML = ''; return; }
+    const tags = ['all', ...[...allTags].sort()];
+    wrap.innerHTML = tags.map(t => {
+      const active = t === this.tagFilter;
+      const cls = active ? 'bg-accent text-white' : 'bg-panel2 text-muted hover:bg-border';
+      return `<button data-tag="${escapeHtml(t)}" class="text-[10px] px-2 py-0.5 rounded ${cls}">${escapeHtml(t)}</button>`;
+    }).join('');
+    wrap.querySelectorAll('button[data-tag]').forEach(b => {
+      b.onclick = () => { this.tagFilter = b.dataset.tag; this.render(); };
+    });
   }
 };
 

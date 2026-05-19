@@ -84,6 +84,12 @@ window.Overview = {
           </div>
 
           <div class="border-t border-border pt-3">
+            <h4 class="font-semibold text-sm mb-2">Métricas SaaS</h4>
+            <p class="text-xs text-muted mb-2">Trackeadas con <code>/metric &lt;nombre&gt; &lt;valor&gt; [unidad]</code>.</p>
+            ${window.Metrics ? Metrics.renderInOverview() : ''}
+          </div>
+
+          <div class="border-t border-border pt-3">
             <h4 class="font-semibold text-sm mb-2">Calculadora de coste</h4>
             <p class="text-xs text-muted mb-2">Compara con alternativas humanas mencionadas en los podcasts.</p>
             <div class="grid grid-cols-2 gap-2 text-xs">

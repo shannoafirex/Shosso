@@ -107,11 +107,17 @@ window.Diagnostics = {
     }
     panel.innerHTML = header + list.map(f => {
       const skill = SkillsStore.get(f.skillId);
+      const isIncident = f.skillId === '__incident__';
+      const icon = isIncident ? '🚨' : (f.resolved ? '✓' : '⚠');
+      const sourceLabel = isIncident ? 'incident' : f.skillId;
+      const borderColor = isIncident && !f.resolved
+        ? 'border-danger/40'
+        : f.resolved ? 'border-success/30' : 'border-warn/30';
       return `
-      <div class="bg-panel2 border ${f.resolved ? 'border-success/30' : 'border-warn/30'} rounded p-2 mb-2 text-xs">
+      <div class="bg-panel2 border ${borderColor} rounded p-2 mb-2 text-xs">
         <div class="flex justify-between items-start">
           <div>
-            <div class="font-semibold">${f.resolved ? '✓' : '⚠'} ${escapeHtml(f.skillId)} <span class="text-muted">— ${f.date.slice(0,10)}</span></div>
+            <div class="font-semibold">${icon} ${escapeHtml(sourceLabel)} <span class="text-muted">— ${f.date.slice(0,10)}</span></div>
             <div class="text-muted mt-1">${escapeHtml(f.symptom)}</div>
           </div>
           ${f.resolved ? `<span class="text-success text-[10px] uppercase">resuelto</span>` : ''}
