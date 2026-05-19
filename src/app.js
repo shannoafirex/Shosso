@@ -59,6 +59,7 @@ function init() {
   WorkspaceImport.init();
   Archetypes.init();
   Shortcuts.init();
+  CommandPalette.init();
   I18N.init();
   Overview.init();
   Tutorial.init();

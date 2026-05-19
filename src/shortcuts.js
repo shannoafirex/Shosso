@@ -6,6 +6,7 @@
 
 window.Shortcuts = {
   BINDINGS: [
+    { keys: ['MOD+SHIFT+P'],    label: 'Command palette (todo en uno)', action: () => CommandPalette.open() },
     { keys: ['MOD+/', 'MOD+?'], label: 'Help', action: () => MockAgent.send('/help') },
     { keys: ['MOD+B'],          label: 'Archetype picker', action: () => Archetypes.openPicker() },
     { keys: ['MOD+P'],          label: 'Nuevo plan', action: () => Planner.open() },
