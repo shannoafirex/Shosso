@@ -1,5 +1,10 @@
 // Monaco bound to real files on disk. Dirty state, Cmd/Ctrl+S to save,
 // reload on external write (from agent tools).
+
+// On Windows the file tree returns backslash paths while the agent's
+// fileWritten event emits forward-slash paths. Normalize for comparisons.
+function normPath(p) { return (p || '').replace(/\\/g, '/'); }
+
 window.Editor = {
   monaco: null,
   open: [], // [{ path, model, dirty, mtime }]
@@ -36,11 +41,9 @@ window.Editor = {
 
         let treeRefreshTimer = null;
         document.addEventListener('shosso:fileWritten', e => {
-          const p = e.detail;
-          const f = this.open.find(o => o.path === p || o.path.endsWith('/' + p));
+          const p = normPath(e.detail);
+          const f = this.open.find(o => normPath(o.path) === p);
           if (f && !f.dirty) this.reloadFromDisk(f.path);
-          // Debounce: if the agent writes many files in quick succession,
-          // only refresh the tree once at the end of the burst.
           clearTimeout(treeRefreshTimer);
           treeRefreshTimer = setTimeout(() => this._renderFileTree(), 300);
         });
@@ -67,20 +70,18 @@ window.Editor = {
   },
 
   async openPath(filePath) {
-    let entry = this.open.find(o => o.path === filePath);
+    filePath = normPath(filePath);
+    let entry = this.open.find(o => normPath(o.path) === filePath);
     if (!entry) {
       const r = await window.shosso.fs.readFile(filePath);
       if (r.error) { alert('Error abriendo: ' + r.error); return; }
       // Reuse existing Monaco model if a previous load already created one
-      // for this URI. Two rapid clicks would otherwise collide with
-      // "Cannot create two models with the same URI".
+      // for this URI. Two rapid clicks would otherwise collide.
       const uri = monaco.Uri.file(filePath);
       let model = monaco.editor.getModel(uri);
       if (!model) model = monaco.editor.createModel(r.content, this.detectLang(filePath), uri);
       else if (model.getValue() !== r.content) model.setValue(r.content);
-      // Late-arriving second openPath may find that the first one already
-      // pushed an entry — bail out instead of duplicating.
-      const dup = this.open.find(o => o.path === filePath);
+      const dup = this.open.find(o => normPath(o.path) === filePath);
       if (dup) { entry = dup; }
       else {
         entry = { path: filePath, model, dirty: false, mtime: r.mtime };
@@ -159,7 +160,12 @@ window.Editor = {
     }
   },
 
+  _treeToken: 0,
   async _renderFileTree() {
+    // Concurrent invocations from rootChanged + fileWritten + manual refresh
+    // would otherwise interleave: each clears then appends, producing
+    // duplicate entries. Use a token: only the latest call may write.
+    const token = ++this._treeToken;
     const ul = document.getElementById('file-tree');
     const rootLabel = document.getElementById('file-tree-root');
     ul.innerHTML = '';
@@ -169,7 +175,11 @@ window.Editor = {
       return;
     }
     rootLabel.textContent = Projects.root.split(/[/\\]/).pop();
-    await this._renderDir(ul, Projects.root, 0);
+    const tempUl = document.createElement('ul');
+    await this._renderDir(tempUl, Projects.root, 0);
+    if (token !== this._treeToken) return; // a newer render superseded us
+    ul.innerHTML = '';
+    while (tempUl.firstChild) ul.appendChild(tempUl.firstChild);
   },
 
   async _renderDir(parentUl, dir, depth) {

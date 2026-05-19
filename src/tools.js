@@ -173,6 +173,8 @@ window.Tools = (() => {
       }
       case 'edit_file': {
         ensureRoot();
+        if (args.old_string === '') return { error: 'edit_file: old_string vacío no es válido. Para reemplazar todo el fichero usa write_file.' };
+        if (args.old_string === args.new_string) return { error: 'edit_file: old_string y new_string son idénticos (no hay cambio).' };
         const p = path.resolve(args.path);
         const r = await window.shosso.fs.readFile(p);
         if (r.error) return { error: r.error };

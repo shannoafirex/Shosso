@@ -41,8 +41,11 @@ window.MemoryStore = {
   },
 
   recall(query) {
-    const q = (query || '').toLowerCase();
-    const words = q.split(/\W+/).filter(w => w.length > 2);
+    const q = (query || '').toLowerCase().trim();
+    if (!q) return [];
+    // Keep 2-char+ words; "git", "ci", "v1" should still match.
+    const words = q.split(/\W+/).filter(w => w.length >= 2);
+    if (words.length === 0) return [];
     const hits = this.items.filter(m => {
       const t = m.text.toLowerCase();
       return words.some(w => t.includes(w));

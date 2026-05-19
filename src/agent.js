@@ -264,7 +264,9 @@ window.Agent = {
           id: b.id, type: 'function',
           function: { name: b.name, arguments: JSON.stringify(b.input || {}) }
         }));
-        const msg = { role: 'assistant', content: text || null };
+        // OpenAI allows content:null only if tool_calls is present.
+        // Otherwise we must use empty string to keep the message valid.
+        const msg = { role: 'assistant', content: text || (toolCalls.length ? null : '') };
         if (toolCalls.length) msg.tool_calls = toolCalls;
         out.push(msg);
       } else if (m.role === 'user' && Array.isArray(m.content)) {
