@@ -326,7 +326,21 @@ window.CommandPalette = {
     `).join('');
     container.querySelectorAll('.cp-item').forEach(b => {
       b.onclick = () => this._execute(+b.dataset.i);
-      b.onmouseenter = () => { this._selectedIndex = +b.dataset.i; this._render(); };
+      // Hover: solo actualiza el index + clase visible, NO re-renderiza
+      // todo el contenedor (performance con muchos items).
+      b.onmouseenter = () => {
+        const newI = +b.dataset.i;
+        if (this._selectedIndex === newI) return;
+        // Quita highlight del anterior
+        const prev = container.querySelector('.cp-item.bg-panel2');
+        if (prev) {
+          prev.classList.remove('bg-panel2', 'border-accent');
+          prev.classList.add('border-transparent');
+        }
+        b.classList.add('bg-panel2', 'border-accent');
+        b.classList.remove('border-transparent');
+        this._selectedIndex = newI;
+      };
     });
     const sel = container.querySelector('.cp-item.bg-panel2');
     if (sel) sel.scrollIntoView({ block: 'nearest' });

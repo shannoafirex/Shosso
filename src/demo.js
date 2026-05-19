@@ -34,11 +34,16 @@ window.Demo = {
     }
     await $(500);
 
-    // 3. Dispatch paralelo
+    // 3. Dispatch paralelo — fuerza Workshop visible para que el demo
+    // muestre lo importante. Sin esto, MockAgent.send anterior ya cambió
+    // a chat y _focusTab no sustituye el tab.
+    document.querySelector('.bottom-tab[data-tab="workshop"]')?.click();
+    await $(200);
     await Dispatcher.dispatch('analiza propuesta de auspicio: dailygrind.io, $3.500/post, 12 entregables');
     await $(800);
 
     // 4. /grebloop — esperamos su convergencia explícitamente
+    document.querySelector('.bottom-tab[data-tab="chat"]')?.click();
     await ReviewLoop.run('PR pequeño: nuevo endpoint /sponsors/decision');
 
     // 5. Knowledge work
