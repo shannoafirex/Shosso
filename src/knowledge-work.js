@@ -118,10 +118,11 @@ window.KnowledgeWork = {
     document.querySelector('[data-tab="chat"]')?.click();
     MockAgent.log('user', `Ejecuta knowledge work: ${a.name}`, 'tú');
 
-    // Progress por pasos — refleja que la acción NO es instantánea en
-    // la vida real (contract review = horas, accounting = horas).
+    // Progress por pasos. NO usamos MockAgent.log (persistiría el HTML
+    // con width:0% y al reload el bar quedaría stuck). DOM transitorio
+    // que se descarta al terminar; el resultado final SÍ se persiste.
     const steps = a.steps || [];
-    const progressMsg = MockAgent.log('tool',
+    const progressMsg = this._transientLog(
       `<b>${a.icon} ${escapeHtml(a.name)}</b> · <span class="kw-step-label">iniciando…</span><br>` +
       `<div class="kw-progress mt-1"><div class="kw-progress-bar" style="width:0%"></div></div>`);
     const labelEl = progressMsg.querySelector('.kw-step-label');
@@ -133,11 +134,19 @@ window.KnowledgeWork = {
       barEl.style.width = `${((i + 1) / steps.length) * 100}%`;
       await new Promise(r => setTimeout(r, step.delay));
     }
-    if (labelEl) labelEl.textContent = '✓ análisis completado';
-    if (barEl) barEl.style.background = '#22c55e';
+    // Quita el progress transitorio antes de loguear el resultado final.
+    progressMsg.remove();
+    MockAgent.log('agent', a.run(), `agente · knowledge work · ${a.id}`);
+  },
 
-    setTimeout(() => {
-      MockAgent.log('agent', a.run(), `agente · knowledge work · ${a.id}`);
-    }, 200);
+  // Mensaje en el chat que NO se persiste — útil para UI temporal.
+  _transientLog(html) {
+    const wrap = document.getElementById('chat-log');
+    const div = document.createElement('div');
+    div.className = 'msg msg-tool';
+    div.innerHTML = html;
+    wrap.appendChild(div);
+    wrap.scrollTop = wrap.scrollHeight;
+    return div;
   }
 };

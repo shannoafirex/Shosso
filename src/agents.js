@@ -114,6 +114,7 @@ window.AgentsStore = {
     document.body.appendChild(modal);
     const close = () => modal.remove();
     modal.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
+    modal.onclick = e => { if (e.target === modal) close(); };
     modal.querySelector('[data-save]').onclick = () => {
       if (a.type === 'sub') {
         const newName = modal.querySelector('#ed-name').value.trim();

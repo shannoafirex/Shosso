@@ -95,7 +95,34 @@ window.Workshop = {
   },
 
   _focusTab() {
-    const btn = document.querySelector('.bottom-tab[data-tab="workshop"]');
-    if (btn && !btn.classList.contains('bg-panel2')) btn.click();
+    // Auto-focus solo si el usuario NO está mirando chat activamente.
+    // Si está en chat, mostramos toast discreto en vez de robarle el foco.
+    const wsBtn = document.querySelector('.bottom-tab[data-tab="workshop"]');
+    const chatActive = document.querySelector('.bottom-tab[data-tab="chat"]')?.classList.contains('bg-panel2');
+    if (!wsBtn) return;
+    if (wsBtn.classList.contains('bg-panel2')) return; // ya está activo
+    if (chatActive) {
+      // Notifica sin cambiar de tab
+      this._notify('▶ dispatch en Workshop — click para ver');
+      wsBtn.classList.add('workshop-pulse');
+      wsBtn.addEventListener('click', () => wsBtn.classList.remove('workshop-pulse'), { once: true });
+      return;
+    }
+    wsBtn.click();
+  },
+
+  _notify(text) {
+    // Banner discreto sobre el chat, auto-desaparece
+    if (this._toast) this._toast.remove();
+    const t = document.createElement('div');
+    t.className = 'workshop-toast';
+    t.innerHTML = `${text} <button class="ml-2 underline">ir</button>`;
+    t.querySelector('button').onclick = () => {
+      document.querySelector('.bottom-tab[data-tab="workshop"]')?.click();
+      t.remove();
+    };
+    document.body.appendChild(t);
+    this._toast = t;
+    setTimeout(() => t.remove(), 4500);
   }
 };
