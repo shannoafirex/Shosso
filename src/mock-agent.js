@@ -15,6 +15,7 @@ window.MockAgent = {
     div.innerHTML = (meta ? `<div class="meta">${meta}</div>` : '') + html;
     wrap.appendChild(div);
     wrap.scrollTop = wrap.scrollHeight;
+    if (role === 'agent' && window.Sycophancy) Sycophancy.wrap(div, html);
     return div;
   },
 
@@ -25,6 +26,13 @@ window.MockAgent = {
     this.turn++;
     this.log('user', escapeHtml(userText), 'tú');
     Context.addConversationTokens(estimateTokens(userText));
+
+    // 0. Easter eggs — responden directamente y cierran el turno.
+    if (await this._handleEasterEggs(userText)) {
+      Productivity.refresh();
+      Compaction.evaluate();
+      return;
+    }
 
     // 1. Recall de memoria relevante (progressive, igual que skills)
     const recalls = MemoryStore.recall(userText);
@@ -162,6 +170,14 @@ window.MockAgent = {
 
   _genericReply(text) {
     const lower = text.toLowerCase();
+
+    // Patrón "you're absolutely right" inducido cuando el usuario "presiona".
+    // Lo añadimos a propósito para que el detector de sycophancy se active y
+    // el usuario vea el botón de "desafiar".
+    if (/(por qué no|why didn'?t|deberías haber|should have)/i.test(text)) {
+      return `Tienes toda la razón, perdón por la confusión. Debí haberlo verificado antes. <span class="text-muted text-xs">[Shosso detectó este patrón y debería mostrarte un botón para desafiar.]</span>`;
+    }
+
     if (lower.includes('hola') || lower.includes('hi') || lower.includes('hey')) {
       return 'Hola. Pídeme algo concreto y, si necesito una skill, la cargaré yo mismo.';
     }
@@ -186,5 +202,54 @@ window.MockAgent = {
     if (!s) return;
     document.querySelector('[data-tab="chat"]')?.click();
     this.send(`Invoca la skill ${s.name}`);
+  },
+
+  async _handleEasterEggs(text) {
+    if (/(1\.?8\s*(billion|bn|b)\b|vibe[- ]?cod(e|ed|ing)|\$1\.8|1800 ?millones)/i.test(text)) {
+      await this.sleep(220);
+      this.log('agent',
+        `🦄 Sí. Alguien vibe-codeó una app y vendió por <b>$1.800.000.000</b>. No es Monopoly, no son Carney coins — son Benjamins reales.<br>` +
+        `La moraleja no es "tú vas a hacer lo mismo". Es: la frontera técnica/no-técnica se está disolviendo. La nueva habilidad es <b>orquestar skills bien</b>.<br>` +
+        `<span class="text-muted text-xs">Necesitas la delusión justa para lanzar. No la tengas excesiva.</span>`,
+        'agente · easter egg');
+      return true;
+    }
+    if (/(food at home|comida en casa|descargo|download(ar)? skill)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `🍽 <b>"Tenemos comida en casa."</b> Antes de descargar una skill random:<br>` +
+        `1. Es un vector de ataque conocido.<br>` +
+        `2. No tiene el contexto de TU workflow exitoso.<br>` +
+        `3. Probablemente la construyes en una tarde.<br>` +
+        `Abre el constructor recursivo (Cmd/Ctrl+K) y dame instrucciones paso a paso.`,
+        'agente · easter egg');
+      return true;
+    }
+    if (/(permanent underclass|underclass permanente|me va a reemplazar|me reemplaza)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `🎯 <b>Permanent</b> es una palabra muy fuerte. Hay desplazamiento, sí, eso es real.<br>` +
+        `Pero quien aprende a construir skills + orquestar agentes tiene una palanca, no un trabajo que se evapora.<br>` +
+        `Por eso existe Shosso. <span class="text-muted text-xs">No es el discurso cool que querías oír; es el que funciona.</span>`,
+        'agente · easter egg');
+      return true;
+    }
+    if (/(20 personas|20 a[ñn]os|\$20\/?\s*mes|\$20\s*a\s*month|20 bucks)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `💸 Conocimiento que antes requería 20 personas durante 20 años hoy cuesta ~$20/mes.<br>` +
+        `Eso es un cambio de orden de magnitud. La pregunta no es si te afecta — es si lo usas.<br>` +
+        `<span class="text-muted text-xs">Y "usarlo bien" empieza por leer este chat, no por descargar 30 skills aleatorias.</span>`,
+        'agente · easter egg');
+      return true;
+    }
+    if (/(no es lo cool|not the cool|hot take|esto es aburrido|2 semanas|two weeks)/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `🥱 Confirmo: <b>esto no es lo cool que querías oír</b>. Empezar con UN agente, vivir UN workflow, codificar UNA skill, iterar 5 veces. Toma ~<b>2 semanas</b> de fricción. Luego, vuelas. Aburrido. Funciona.`,
+        'agente · easter egg');
+      return true;
+    }
+    return false;
   }
 };

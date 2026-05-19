@@ -36,6 +36,7 @@
       <h1 class="font-semibold tracking-tight">Shosso</h1>
       <span class="text-xs text-muted hidden md:inline">IDE nativo de skills · context-aware</span>
       <span id="model-pill" class="hidden md:inline text-[10px] uppercase tracking-wider bg-success/15 text-success px-2 py-0.5 rounded-full">modelo: bueno</span>
+      <span id="motto" class="hidden lg:inline text-[11px] text-accent2 italic transition-opacity duration-300 max-w-xs truncate"></span>
     </div>
     <div class="flex items-center gap-4">
       <div id="productivity-pill" class="hidden sm:flex items-center gap-2 text-xs">
@@ -111,13 +112,14 @@
 
     <!-- Right: Skills / Agents / Context / Tokenizer / System / Memory -->
     <aside class="col-span-3 border-l border-border bg-panel flex flex-col">
-      <nav class="flex border-b border-border overflow-x-auto">
-        <button data-tab="skills" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide bg-panel2">Skills</button>
-        <button data-tab="agents" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Agentes</button>
-        <button data-tab="context" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Contexto</button>
-        <button data-tab="memory" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Memoria</button>
-        <button data-tab="tokenizer" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Tokens</button>
-        <button data-tab="system" class="side-tab flex-1 py-2 text-xs uppercase tracking-wide">Sistema</button>
+      <nav class="flex border-b border-border overflow-x-auto whitespace-nowrap">
+        <button data-tab="skills" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide bg-panel2">Skills</button>
+        <button data-tab="agents" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Agentes</button>
+        <button data-tab="context" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Contexto</button>
+        <button data-tab="memory" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Memoria</button>
+        <button data-tab="tokenizer" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Tokens</button>
+        <button data-tab="system" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Sistema</button>
+        <button data-tab="philosophy" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Filosofía</button>
       </nav>
       <div class="flex-1 overflow-y-auto">
         <!-- Skills panel -->
@@ -194,6 +196,7 @@
           </div>
           <div id="tk-visual" class="font-mono text-xs leading-relaxed p-2 bg-panel2 rounded border border-border whitespace-pre-wrap"></div>
           <p class="text-[10px] text-muted">* Estimación a tarifa típica de input. Los tokens reales dependen del tokenizador del proveedor.</p>
+          <div class="mt-4 pt-3 border-t border-border" id="predictor"></div>
         </div>
 
         <!-- System prompt panel -->
@@ -221,7 +224,21 @@
                 <span class="font-mono text-muted" id="sys-agentmd-tokens">desactivado</span>
               </summary>
               <textarea id="agentmd-body" rows="6" placeholder="Sólo si tienes información propietaria que el agente necesita en CADA turno." class="w-full text-[11px] p-2 bg-bg font-mono outline-none"></textarea>
+              <div id="antipatterns-warnings" class="px-2 pb-2"></div>
             </details>
+          </div>
+        </div>
+
+        <!-- Philosophy + Harnesses panel -->
+        <div data-panel="philosophy" class="side-panel hidden p-3 space-y-3">
+          <h2 class="font-semibold text-sm">Filosofía</h2>
+          <p class="text-xs text-muted leading-snug">La cultura del IDE. Lo que no es feature pero sí actitud.</p>
+          <div id="philosophy-list" class="space-y-2"></div>
+
+          <div class="pt-3 border-t border-border">
+            <h2 class="font-semibold text-sm mb-2">Comparativa de harnesses</h2>
+            <p class="text-xs text-muted leading-snug mb-2">Los modelos son los mismos. La diferencia es cuánto control te dan sobre el contexto.</p>
+            <div id="harnesses-list" class="space-y-2"></div>
           </div>
         </div>
       </div>
@@ -290,6 +307,11 @@
   <script src="src/productivity.js"></script>
   <script src="src/compaction.js"></script>
   <script src="src/diagnostics.js"></script>
+  <script src="src/predictor.js"></script>
+  <script src="src/sycophancy.js"></script>
+  <script src="src/antipatterns.js"></script>
+  <script src="src/harnesses.js"></script>
+  <script src="src/philosophy.js"></script>
   <script src="src/mock-agent.js"></script>
   <script src="src/skill-builder.js"></script>
   <script src="src/tutorial.js"></script>

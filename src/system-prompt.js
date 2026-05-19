@@ -37,6 +37,7 @@ window.SystemPromptView = {
       localStorage.setItem('shosso.agentmd', this.agentMd);
       this._refreshAgentMdTokens();
       Context.refresh();
+      if (window.AntiPatterns) AntiPatterns.scan(this.agentMd);
     });
     this._refreshAgentMdTokens();
   },

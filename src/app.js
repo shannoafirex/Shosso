@@ -42,6 +42,10 @@ function init() {
   TemplatesStore.init();
   Compaction.init();
   Diagnostics.init();
+  Predictor.init();
+  AntiPatterns.init();
+  Harnesses.init();
+  Philosophy.init();
   Tutorial.init();
   ImportSkill.init();
 
