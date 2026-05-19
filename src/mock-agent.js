@@ -127,7 +127,13 @@ window.MockAgent = {
     const rules = [
       { id: 'sponsor-research', keys: ['patrocin', 'sponsor', 'auspici', 'brand deal', 'colabora'] },
       { id: 'code-structure',   keys: ['estructur', 'refactor', 'limpi', 'organiz', 'code-structure', 'reorgan', 'service layer'] },
-      { id: 'weekly-report',    keys: ['reporte semanal', 'weekly', 'reporte de la semana', 'reporte', 'metricas semanales', 'kpis'] }
+      { id: 'weekly-report',    keys: ['reporte semanal', 'weekly', 'reporte de la semana', 'reporte', 'metricas semanales', 'kpis'] },
+      { id: 'api-design',       keys: ['api', 'endpoint', 'contrato', 'contract', 'rpc', 'rest'] },
+      { id: 'schema-migration', keys: ['migracion', 'migration', 'schema', 'esquema', 'drizzle', 'columna'] },
+      { id: 'churn-investigation', keys: ['churn', 'cancelacion', 'cancellation', 'retencion', 'cohorte'] },
+      { id: 'pricing-experiment',  keys: ['pricing', 'precio', 'tier', 'a/b', 'experimento'] },
+      { id: 'user-interview-synth',keys: ['entrevista', 'interview', 'sintet', 'patron de usuario', 'usuarios dicen'] },
+      { id: 'support-triage',      keys: ['ticket', 'soporte', 'support', 'queja', 'complaint', 'triage'] }
     ];
     for (const r of rules) {
       if (r.keys.some(k => t.includes(this._normalize(k)))) {
@@ -141,7 +147,71 @@ window.MockAgent = {
     if (skill.id === 'weekly-report') return this._weeklyReport();
     if (skill.id === 'sponsor-research') return this._sponsorResearch();
     if (skill.id === 'code-structure') return this._codeStructure();
+    if (skill.id === 'api-design') return this._apiDesign();
+    if (skill.id === 'schema-migration') return this._schemaMigration();
+    if (skill.id === 'churn-investigation') return this._churnInvestigation();
+    if (skill.id === 'pricing-experiment') return this._pricingExperiment();
+    if (skill.id === 'user-interview-synth') return this._userInterviewSynth();
+    if (skill.id === 'support-triage') return this._supportTriage();
     return `Skill ${skill.name} ejecutada.`;
+  },
+
+  _apiDesign() {
+    return `Propuesta para <code>POST /sponsors</code>:<br>
+      • Type compartido: <code>Sponsor = { id, name, email, status: 'pending'|'accepted'|'rejected', notes }</code>.<br>
+      • Auth: requiere session válida + role <code>creator</code>.<br>
+      • Validación: zod schema en boundary (rechaza email malformado, name &lt; 2 chars).<br>
+      • Errores tipados: <code>409 SponsorExists</code>, <code>422 ValidationError</code>.<br>
+      • Tests contractuales: type del frontend coincide con response de backend.`;
+  },
+
+  _schemaMigration() {
+    return `Cambio: añadir <code>tier</code> a la tabla <code>customers</code>.<br>
+      Clasificación: <b>aditivo</b> — una migración basta.<br>
+      • Add column <code>tier VARCHAR(20) DEFAULT 'free' NOT NULL</code>.<br>
+      • Index si vas a filtrar por tier: <code>CREATE INDEX CONCURRENTLY idx_customers_tier ON customers(tier)</code>.<br>
+      • Test rollback: <code>DROP COLUMN tier</code> con datos backed up.<br>
+      • No requiere fases. Aplica directo en staging primero.`;
+  },
+
+  _churnInvestigation() {
+    return `Investigación de churn (3 cancelaciones esta semana):<br>
+      • Patrón identificado: 3/3 cancelaron entre día 5-7 post-signup.<br>
+      • Último happy path común: completaron onboarding pero NO conectaron Stripe.<br>
+      • Tickets soporte: 1/3 abrió ticket sobre Stripe ("no encuentro el botón").<br>
+      • Cohorte similar: 12% no-Stripe en día 7 → 60% churn al día 14.<br>
+      <br><b>Causa:</b> fricción en conexión de Stripe — UX/Stripe.<br>
+      <b>Acción:</b> revisar flow de Stripe Connect, añadir checkpoint en onboarding.`;
+  },
+
+  _pricingExperiment() {
+    return `Experimento: <b>tier $9 vs $19 starter</b>.<br>
+      • Hipótesis: $9 captura 2x conversiones pero 40% downgrade desde $19.<br>
+      • Métrica primaria: revenue por visitante (no conversion alone).<br>
+      • Guardrails: NPS no baja >3 puntos, churn no sube >0.5%.<br>
+      • Muestra: 800/grupo (potencia 80%, MDE 8% revenue/visit).<br>
+      • Duración: 3 semanas. Geo: US/UK/CA en cohorte nueva.<br>
+      • Stop-loss: si revenue/visit baja >10% en semana 1, abortar.`;
+  },
+
+  _userInterviewSynth() {
+    return `Síntesis de 14 entrevistas (week 6 de research):<br>
+      • <b>Patrón 1</b> (10/14): "el dashboard tarda mucho en cargar" — performance real (p95 = 3.2s).<br>
+      • <b>Patrón 2</b> (8/14): no entienden la diferencia entre tier Pro y Business.<br>
+      • <b>Patrón 3</b> (6/14): quieren bulk-action en sponsors (seleccionar varios).<br>
+      <br>Citas:<br>
+      <i>"Espero 3 segundos cada vez que filtro, eso me saca del flow."</i><br>
+      <i>"Pago Pro pero no sé qué me da que Free no."</i><br>
+      <br><b>Próximos pasos:</b> A/B test mensaje pricing + sprint perf dashboard.`;
+  },
+
+  _supportTriage() {
+    return `Ticket #1247 triado:<br>
+      • <b>Categoría:</b> bug (Stripe webhook no actualiza estado).<br>
+      • <b>Severidad:</b> P1 (afecta a usuarios paying).<br>
+      • <b>Logs:</b> encontrado en Sentry — error 503 en endpoint /api/webhooks/stripe.<br>
+      • <b>Borrador respuesta:</b> "Hola Jordi, lo vemos. Tu pago se procesó (verificado en Stripe), reconciliamos el estado en tu cuenta en próximas horas. Te avisamos."<br>
+      • <b>Acción:</b> ping #incidents (P1), parche en retry-logic del webhook.`;
   },
 
   _weeklyReport() {
@@ -374,6 +444,55 @@ window.MockAgent = {
         `Contratos, reportes, accounting, research legal/médico personal: el modelo ya es suficiente. Lo que falta es <b>tooling</b>.<br>` +
         `Un Claude Pro de $200/mes ahorra 5.000€ en un contrato, 6.000€ en accounting. ROI evidente.`,
         'agente · easter egg');
+      return true;
+    }
+    // SaaS easter eggs
+    if (/\b(MRR|monthly recurring|annual recurring|ARR)\b/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `💰 <b>MRR / ARR</b> son la métrica norte de un SaaS, pero NO la única señal de salud.<br>` +
+        `Lo que el dashboard tiene que mostrar contigo: MRR, churn (logo + revenue), CAC payback, LTV/CAC, NPS, NRR.<br>` +
+        `Para no obsesionarte: ARR objetivo del trimestre + 1 número de calidad (NPS o retención semana 4).`,
+        'agente · saas');
+      return true;
+    }
+    if (/\b(churn|cancelaciones|cancellations)\b/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `📉 <b>Churn</b> tiene dos sabores que la gente confunde:<br>` +
+        `• <b>Logo churn</b>: cuentas que cancelan.<br>` +
+        `• <b>Revenue churn</b>: dinero perdido (downgrade + cancelaciones).<br>` +
+        `Para investigar churn real: invoca <code>churn-investigation</code>.<br>` +
+        `Para SaaS B2B: net revenue retention (NRR) > 100% es la verdadera señal.`,
+        'agente · saas');
+      return true;
+    }
+    if (/\b(CAC|cost of acquisition|payback|LTV)\b/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `🎯 <b>CAC payback</b> = meses para recuperar el coste de adquirir un cliente.<br>` +
+        `Regla de salud: < 12 meses (B2B), < 6 meses (B2C).<br>` +
+        `<b>LTV/CAC</b> > 3 es bueno; > 5 quizás estás dejando crecimiento en la mesa.<br>` +
+        `Subestimación clásica: olvidar el coste del equipo de marketing en el CAC.`,
+        'agente · saas');
+      return true;
+    }
+    if (/\b(NPS|net promoter|csat)\b/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `📊 <b>NPS</b> > 50 es excelente para SaaS; 30-50 normal; <30 hay fricción real.<br>` +
+        `OJO: NPS sin texto open-ended es ruido. Los detractores te dicen QUÉ romper.<br>` +
+        `Mide CSAT post-ticket de soporte, NPS trimestralmente al universo entero.`,
+        'agente · saas');
+      return true;
+    }
+    if (/\b(product[- ]market fit|PMF)\b/i.test(text)) {
+      await this.sleep(180);
+      this.log('agent',
+        `🎯 <b>Product-market fit</b> no es un check-box, es un olor.<br>` +
+        `Señales: usuarios usan sin onboarding extenso, refieren orgánicamente, churn natural <5%/mes (B2C) o <2% (B2B), demanda > supply.<br>` +
+        `Pre-PMF: tiempo en construir > tiempo en hablar con usuarios = bandera roja.`,
+        'agente · saas');
       return true;
     }
     if (/(no es lo cool|not the cool|hot take|esto es aburrido|2 semanas|two weeks)/i.test(text)) {

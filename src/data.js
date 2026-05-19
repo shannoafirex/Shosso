@@ -181,6 +181,157 @@ Output: { veredicto, score, fuentes[], borrador_respuesta? }`,
     ]
   },
   {
+    id: 'api-design',
+    name: 'api-design',
+    description: 'Diseña endpoints REST/RPC con tipos compartidos cliente-servidor. Úsala al añadir un nuevo recurso o cambiar contrato existente.',
+    body: `# api-design
+
+Para cada nuevo recurso o endpoint:
+1. Define el tipo del recurso (un único source of truth, usado por backend Y frontend).
+2. Lista las operaciones (CRUD + acciones específicas) con tipos de input/output explícitos.
+3. Decide auth requirements por endpoint (público / auth / role X).
+4. Define errores: códigos + payloads tipados.
+5. Añade validación en el boundary (zod, valibot) — no confíes en TypeScript en runtime.
+6. Test contrato: el mismo type usado por frontend debe satisfacer el de backend.
+
+## Reglas duras
+- Nunca un endpoint sin tipo de respuesta. \`unknown\` no cuenta.
+- Errores son ciudadanos de primera clase, no excepciones perdidas.
+- Pagination explícita desde el día 1 si la lista puede crecer.
+
+Output: tipos compartidos + handlers + tests contractuales.`,
+    loaded: false, iterations: 4, failures: [],
+    tags: ['engineering', 'saas']
+  },
+  {
+    id: 'schema-migration',
+    name: 'schema-migration',
+    description: 'Genera migraciones DB seguras (zero-downtime cuando posible). Detecta cambios destructivos y propone migración en fases.',
+    body: `# schema-migration
+
+Antes de tocar la DB:
+1. Clasifica el cambio: aditivo (nuevo campo/tabla) vs destructivo (rename/drop/change-type).
+2. Aditivos: una migración basta.
+3. Destructivos: SIEMPRE migración en fases — expand, migrate data, contract.
+   - Fase 1: añade nueva columna/tabla, deja la vieja.
+   - Fase 2: deploy app que escribe en ambos.
+   - Fase 3: backfill datos viejos a nuevo formato.
+   - Fase 4: deploy app que solo lee nuevo.
+   - Fase 5: borra columna vieja.
+4. Valida en staging con copia de prod antes de aplicar.
+5. Test de rollback documentado.
+
+## Reglas duras
+- NUNCA borres una columna en la misma migración donde dejas de escribirla.
+- Indices grandes: \`CREATE INDEX CONCURRENTLY\` en Postgres.
+- Backfills > 100k rows: por batches con throttle.
+
+Output: SQL/drizzle + plan de fases + verificación.`,
+    loaded: false, iterations: 5, failures: [],
+    tags: ['engineering', 'saas']
+  },
+  {
+    id: 'churn-investigation',
+    name: 'churn-investigation',
+    description: 'Investiga por qué los usuarios cancelan. Cruza eventos, cohortes, sesiones de soporte y product analytics.',
+    body: `# churn-investigation
+
+Entrada: lista de usuarios que cancelaron + ventana de tiempo.
+
+Pasos:
+1. Pull eventos de producto últimos 30 días pre-cancelación.
+2. Identifica el último "happy path" — última acción exitosa antes de la decadencia.
+3. Cruza con tickets de soporte (¿hubo fricción reportada?).
+4. Cruza con cohorte: ¿usuarios similares también churn-aron?
+5. Identifica patrón: técnico (bug), valor (no entendieron feature X), pricing (overpriced), competencia.
+
+## Salida
+- Top 3 causas por frecuencia.
+- Win-back posible (qué cambiaría para que volvieran).
+- Acción producto recomendada (cambio que reduce el patrón).
+
+## Reglas duras
+- N < 10 churns → no concluyas, observa más.
+- Nunca cierres como "no es para ellos" sin haber leído el ticket de soporte.`,
+    loaded: false, iterations: 4, failures: [],
+    tags: ['product', 'saas']
+  },
+  {
+    id: 'pricing-experiment',
+    name: 'pricing-experiment',
+    description: 'Diseña experimento de pricing A/B con corte estadístico y guardrails de retención. Devuelve hipótesis, métricas y plan de rollout.',
+    body: `# pricing-experiment
+
+Entrada: hipótesis ("subir a $49 reduce CAC payback" o "tier $9 captura más conversión").
+
+Pasos:
+1. Define métrica primaria (revenue por visita, conversion, MRR a 90d).
+2. Define guardrails (no degradar NPS, no inflar churn).
+3. Estima tamaño de muestra requerido (potencia 80%, MDE realista).
+4. Plan de rollout: A/B 50/50, segmentación por geo o por tipo de usuario nuevo.
+5. Pre-mortem: ¿qué resultado nos haría parar?
+
+## Reglas duras
+- Nunca cambies pricing y mensaje a la vez.
+- Pricing grandfathered: clientes existentes no cambian de tier.
+- Mínimo 2 semanas; idealmente 4.
+- Stop-loss: si guardrail rompe en >5%, abortar.
+
+Output: doc de experimento + dashboards a setup + criterios de decisión.`,
+    loaded: false, iterations: 3, failures: [],
+    tags: ['growth', 'saas']
+  },
+  {
+    id: 'user-interview-synth',
+    name: 'user-interview-synth',
+    description: 'Sintetiza 5-20 entrevistas en hallazgos accionables. Identifica patrones, citas representativas y siguientes pasos.',
+    body: `# user-interview-synth
+
+Entrada: transcripciones de entrevistas (texto o links a Notion/Granola).
+
+Pasos:
+1. Lee todas las transcripciones. NO resumas individualmente; busca señales cruzadas.
+2. Cluster por temas (job-to-be-done, pain, hack actual, willingness to pay).
+3. Identifica patrones con ≥ 30% de muestra.
+4. Extrae 1-2 citas representativas por patrón.
+5. Cruza con datos producto: ¿los entrevistados usan la feature mencionada?
+
+## Salida
+- 5-7 hallazgos accionables (no "los usuarios quieren X" → "X bloquea Y en N% de la base").
+- 1 mapa de oportunidades (impacto vs esfuerzo).
+- Siguientes pasos: a) experimentos sugeridos, b) más entrevistas, c) nada (señal débil).
+
+## Reglas duras
+- 5 entrevistas no son una "tendencia"; 12+ sí.
+- Cita textual, no parafrasees.`,
+    loaded: false, iterations: 3, failures: [],
+    tags: ['product', 'saas']
+  },
+  {
+    id: 'support-triage',
+    name: 'support-triage',
+    description: 'Clasifica tickets de soporte y propone respuesta + escalación. Detecta tickets que son bugs ocultos vs duda real.',
+    body: `# support-triage
+
+Entrada: ticket completo (mensaje + contexto del usuario si lo hay).
+
+Pasos:
+1. Categoriza: bug, how-to, account, billing, feature-request, abuso.
+2. Severidad: P0 (caído) / P1 (degradado) / P2 (impacto bajo) / P3 (cosmético).
+3. Si es bug → busca en logs/sentry mención del usuario o error.
+4. Borrador de respuesta corta, empática, accionable.
+5. Si severity ≥ P1 → ping al canal #incidents.
+
+## Reglas duras
+- Nunca pidas más info que el usuario ya dio (lee bien).
+- Si la respuesta requiere cambio de código, NO prometas fecha — di "investigamos".
+- Tickets repetidos del mismo tema 3x → señal: documenta o feature missing.
+
+Output: { categoria, severidad, borrador, accion_sugerida }`,
+    loaded: false, iterations: 4, failures: [],
+    tags: ['support', 'saas']
+  },
+  {
     id: 'weekly-report',
     name: 'weekly-report',
     description: 'Genera reporte semanal cruzando 8 fuentes (Notion, YouTube, Dub, Stripe, Twitter, Substack, Gumroad, GitHub).',
@@ -238,6 +389,14 @@ window.SEED_AGENTS = [
     type: 'sub',
     skills: ['sponsor-research', 'weekly-report'],
     productivityScore: 0.9
+  },
+  {
+    id: 'engineering',
+    name: 'engineering',
+    role: 'API, schemas, type contracts, performance.',
+    type: 'sub',
+    skills: ['api-design', 'schema-migration', 'code-structure'],
+    productivityScore: 0.85
   }
 ];
 
@@ -266,6 +425,47 @@ window.SEED_TEMPLATES = [
     name: 'cli-bun',
     description: 'CLI con Bun + cac. Single-binary friendly.',
     structure: ['src/cli.ts', 'src/commands/', 'src/lib/', 'bun.lockb']
+  },
+  {
+    id: 'saas-starter',
+    name: 'saas-starter',
+    description: 'SaaS completo: Next + Auth + Stripe billing + Postgres (Drizzle) + emails (Resend) + analytics. Lo más cerca posible de prod en día 1.',
+    structure: [
+      'app/(marketing)/page.tsx',
+      'app/(marketing)/pricing/page.tsx',
+      'app/(app)/dashboard/page.tsx',
+      'app/(app)/settings/billing/page.tsx',
+      'app/api/auth/[...nextauth]/route.ts',
+      'app/api/webhooks/stripe/route.ts',
+      'app/api/webhooks/resend/route.ts',
+      'lib/auth.ts',
+      'lib/db.ts',
+      'lib/stripe.ts',
+      'lib/email.ts',
+      'lib/analytics.ts',
+      'drizzle/schema.ts',
+      'drizzle/migrations/',
+      'components/billing/PricingTable.tsx',
+      'components/auth/SignIn.tsx',
+      'emails/welcome.tsx',
+      'tests/billing.test.ts'
+    ]
+  },
+  {
+    id: 'agent-saas',
+    name: 'agent-saas',
+    description: 'SaaS agentic-native: además de saas-starter, incluye orquestación de agentes, skills marketplace local y context tracking.',
+    structure: [
+      'app/(app)/agents/page.tsx',
+      'app/(app)/skills/page.tsx',
+      'app/(app)/runs/page.tsx',
+      'app/api/agents/dispatch/route.ts',
+      'app/api/skills/invoke/route.ts',
+      'lib/agents/runner.ts',
+      'lib/skills/loader.ts',
+      'lib/context/tracker.ts',
+      'drizzle/schema.ts'
+    ]
   }
 ];
 
