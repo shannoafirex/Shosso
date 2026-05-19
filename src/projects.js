@@ -107,31 +107,94 @@ window.Projects = {
       };
     });
     modal.querySelector('#proj-new').onclick = () => {
-      const name = prompt('Nombre del nuevo proyecto:');
-      if (!name) return;
-      const id = this._create(name);
       close();
-      if (confirm(`Proyecto "${name}" creado. ¿Cambiar a él ahora?\n\n(página recargará con workspace vacío)`)) {
-        this.switchTo(id);
-      } else {
-        this._renderPill();
-      }
+      this._createWithTemplate();
     };
     modal.querySelector('#proj-from-arch').onclick = () => {
       const name = prompt('Nombre del nuevo proyecto:');
       if (!name) return;
-      const id = this._create(name);
-      // Switch primero, después aplicar archetype
+      const id = this._create(name, 'blank');
       this._switchInternal(id);
-      location.reload();
-      // Tras reload, mostraremos picker — usamos session storage para señalizar
       sessionStorage.setItem('shosso.show-archetype-after-reload', '1');
+      location.reload();
     };
   },
 
-  _create(name) {
+  // UI para crear proyecto con opciones de template.
+  _createWithTemplate() {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="bg-panel border border-border rounded-lg w-full max-w-md">
+        <div class="flex items-center justify-between border-b border-border px-4 py-3">
+          <h3 class="font-semibold text-sm">Nuevo proyecto</h3>
+          <button data-close class="text-muted hover:text-white">✕</button>
+        </div>
+        <div class="p-4 space-y-3">
+          <label class="block">
+            <span class="text-xs text-muted">Nombre</span>
+            <input id="np-name" placeholder="ej: SponsorSync v2"
+              class="w-full bg-panel2 border border-border rounded px-2 py-1.5 text-sm mt-1 outline-none focus:border-accent" autofocus />
+          </label>
+          <div>
+            <span class="text-xs text-muted">Empezar con:</span>
+            <div class="grid grid-cols-1 gap-2 mt-1">
+              <label class="flex items-start gap-2 p-2 border border-border rounded hover:bg-panel2 cursor-pointer">
+                <input type="radio" name="np-template" value="default" checked class="mt-0.5 accent-accent" />
+                <div>
+                  <div class="text-sm font-medium">Seed por defecto</div>
+                  <div class="text-[11px] text-muted">16 skills · 2 sub-agentes · 2 memorias (lo que viene en el seed)</div>
+                </div>
+              </label>
+              <label class="flex items-start gap-2 p-2 border border-border rounded hover:bg-panel2 cursor-pointer">
+                <input type="radio" name="np-template" value="blank" class="mt-0.5 accent-accent" />
+                <div>
+                  <div class="text-sm font-medium">Vacío</div>
+                  <div class="text-[11px] text-muted">Sólo el agente principal. Tú construyes todo desde cero.</div>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="border-t border-border p-3 flex justify-end gap-2">
+          <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Cancelar</button>
+          <button id="np-create" class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Crear y cambiar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    modal.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
+    modal.onclick = e => { if (e.target === modal) close(); };
+    modal.querySelector('#np-create').onclick = () => {
+      const name = modal.querySelector('#np-name').value.trim();
+      if (!name) { alert('Nombre requerido.'); return; }
+      const template = modal.querySelector('input[name="np-template"]:checked').value;
+      const id = this._create(name, template);
+      close();
+      this._switchInternal(id);
+      location.reload();
+    };
+  },
+
+  _create(name, template = 'default') {
     const id = 'proj-' + Date.now().toString(36);
     this._ensure(id, name);
+    // Si template = 'blank', pre-poblamos las claves scoped con estados
+    // mínimos antes de que el switch lo active. Si 'default', no hacemos
+    // nada y las stores usarán sus seeds en init().
+    if (template === 'blank') {
+      const blankAgents = [{
+        id: 'main', name: 'main', role: 'Orquesta general. Empieza siempre por aquí.',
+        type: 'main', skills: [], productivityScore: 0.5
+      }];
+      localStorage.setItem(`shosso.proj.${id}.shosso.skills`, '[]');
+      localStorage.setItem(`shosso.proj.${id}.shosso.agents`, JSON.stringify(blankAgents));
+      localStorage.setItem(`shosso.proj.${id}.shosso.memory`, '[]');
+      localStorage.setItem(`shosso.proj.${id}.shosso.failures`, '[]');
+      localStorage.setItem(`shosso.proj.${id}.shosso.plans`, '[]');
+      localStorage.setItem(`shosso.proj.${id}.shosso.chat.history`, '[]');
+      localStorage.setItem(`shosso.proj.${id}.shosso.metrics`, '{}');
+    }
     return id;
   },
 

@@ -7,6 +7,23 @@ window.WorkspaceExport = {
     document.getElementById('btn-export').addEventListener('click', () => this.openModal());
   },
 
+  // Snapshot estructurado: re-importable.
+  buildJSON() {
+    return {
+      version: 1,
+      exportedAt: Date.now(),
+      shossoVersion: '0.1.0',
+      skills: SkillsStore.skills,
+      agents: AgentsStore.agents,
+      memory: MemoryStore.items,
+      plans: SafeStorage.safeGet('shosso.plans', []),
+      metrics: window.Metrics ? Metrics.data : {},
+      agentMd: window.SystemPromptView?.agentMd || '',
+      security: SafeStorage.safeGet('shosso.security', null),
+      diagnostics: window.Diagnostics?.failures || []
+    };
+  },
+
   build() {
     const now = new Date().toISOString().slice(0, 10);
     const lines = [];
@@ -131,6 +148,7 @@ window.WorkspaceExport = {
 
   openModal() {
     const md = this.build();
+    const json = JSON.stringify(this.buildJSON(), null, 2);
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4';
     modal.innerHTML = `
@@ -138,29 +156,44 @@ window.WorkspaceExport = {
         <div class="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
             <h3 class="font-semibold">Workspace export</h3>
-            <p class="text-xs text-muted">Snapshot en markdown — pega en Notion, manda a inversores, comparte con team.</p>
+            <p class="text-xs text-muted">Markdown para humanos · JSON para re-importar.</p>
           </div>
           <button data-close class="text-muted hover:text-white">✕</button>
         </div>
+        <div class="border-b border-border flex">
+          <button data-mode="md" class="ex-tab flex-1 py-1.5 text-xs bg-panel2">Markdown</button>
+          <button data-mode="json" class="ex-tab flex-1 py-1.5 text-xs">JSON</button>
+        </div>
         <div class="flex-1 overflow-y-auto p-3">
-          <textarea readonly class="w-full h-full min-h-[400px] bg-bg border border-border rounded p-3 text-xs font-mono outline-none">${escapeHtml(md)}</textarea>
+          <textarea id="ex-content" readonly class="w-full h-full min-h-[400px] bg-bg border border-border rounded p-3 text-xs font-mono outline-none">${escapeHtml(md)}</textarea>
         </div>
         <div class="border-t border-border p-3 flex justify-between gap-2">
-          <span class="text-xs text-muted self-center">${md.length.toLocaleString()} chars · ${estimateTokens(md)}t</span>
+          <span id="ex-stats" class="text-xs text-muted self-center">${md.length.toLocaleString()} chars · ${estimateTokens(md)}t</span>
           <div class="flex gap-2">
-            <button data-copy class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Copiar al portapapeles</button>
-            <button data-download class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Descargar .md</button>
+            <button data-copy class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Copiar</button>
+            <button data-download class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Descargar</button>
             <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Cerrar</button>
           </div>
         </div>
       </div>`;
     document.body.appendChild(modal);
     const close = () => modal.remove();
+    let mode = 'md';
+    const ta = modal.querySelector('#ex-content');
+    const stats = modal.querySelector('#ex-stats');
+    const setMode = (m) => {
+      mode = m;
+      modal.querySelectorAll('.ex-tab').forEach(b => b.classList.toggle('bg-panel2', b.dataset.mode === m));
+      const content = m === 'md' ? md : json;
+      ta.value = content;
+      stats.textContent = `${content.length.toLocaleString()} chars · ${estimateTokens(content)}t · ${m.toUpperCase()}`;
+    };
+    modal.querySelectorAll('.ex-tab').forEach(b => b.onclick = () => setMode(b.dataset.mode));
     modal.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
     modal.onclick = e => { if (e.target === modal) close(); };
     modal.querySelector('[data-copy]').onclick = async () => {
       try {
-        await navigator.clipboard.writeText(md);
+        await navigator.clipboard.writeText(mode === 'md' ? md : json);
         const btn = modal.querySelector('[data-copy]');
         const orig = btn.textContent;
         btn.textContent = '✓ copiado';
@@ -171,11 +204,14 @@ window.WorkspaceExport = {
       }
     };
     modal.querySelector('[data-download]').onclick = () => {
-      const blob = new Blob([md], { type: 'text/markdown' });
+      const content = mode === 'md' ? md : json;
+      const ext = mode === 'md' ? 'md' : 'json';
+      const mime = mode === 'md' ? 'text/markdown' : 'application/json';
+      const blob = new Blob([content], { type: mime });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `shosso-snapshot-${new Date().toISOString().slice(0, 10)}.md`;
+      a.download = `shosso-snapshot-${new Date().toISOString().slice(0, 10)}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
     };

@@ -56,6 +56,7 @@ function init() {
   Workshop.init();
   Metrics.init();
   WorkspaceExport.init();
+  WorkspaceImport.init();
   Archetypes.init();
   Shortcuts.init();
   I18N.init();
