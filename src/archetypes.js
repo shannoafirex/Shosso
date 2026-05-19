@@ -203,8 +203,17 @@ window.Archetypes = {
     }, 1500);
   },
 
+  _customs() {
+    return SafeStorage.safeGet('shosso.custom-archetypes', []);
+  },
+
+  _all() {
+    return [...this.LIST, ...this._customs().map(c => ({ ...c, custom: true }))];
+  },
+
   openPicker() {
     SafeStorage.safeSet('shosso.archetype-seen', true);
+    const all = this._all();
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4';
     modal.innerHTML = `
@@ -217,25 +226,29 @@ window.Archetypes = {
           <button data-close class="text-muted hover:text-white">✕</button>
         </div>
         <div class="flex-1 overflow-y-auto p-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-          ${this.LIST.map(a => `
-            <button class="arch-card text-left border border-border rounded-lg p-3 hover:border-accent hover:bg-panel2 transition" data-id="${a.id}">
+          ${all.map(a => `
+            <button class="arch-card text-left border ${a.custom ? 'border-accent2/50' : 'border-border'} rounded-lg p-3 hover:border-accent hover:bg-panel2 transition" data-id="${a.id}" data-custom="${a.custom ? '1' : ''}">
               <div class="flex items-center gap-2">
                 <span class="text-2xl">${a.icon}</span>
                 <span class="font-semibold">${escapeHtml(a.name)}</span>
+                ${a.custom ? '<span class="text-[10px] bg-accent2/20 text-accent2 px-1.5 py-0.5 rounded">custom</span>' : ''}
               </div>
               <p class="text-xs text-muted mt-1">${escapeHtml(a.tagline)}</p>
               <div class="flex flex-wrap gap-1 mt-2">
                 <span class="text-[10px] bg-bg px-1.5 py-0.5 rounded">${a.skills.length} skills</span>
                 <span class="text-[10px] bg-bg px-1.5 py-0.5 rounded">${a.subAgents.length} sub-agentes</span>
-                <span class="text-[10px] bg-bg px-1.5 py-0.5 rounded">${a.plan.prs.length} PRs</span>
+                <span class="text-[10px] bg-bg px-1.5 py-0.5 rounded">${a.plan ? a.plan.prs.length : 0} PRs</span>
                 <span class="text-[10px] bg-bg px-1.5 py-0.5 rounded">${a.memory.length} memorias</span>
               </div>
             </button>
           `).join('')}
         </div>
-        <div class="border-t border-border p-3 flex justify-between items-center">
-          <span class="text-xs text-muted">Cancelar = seguir como estás. Siempre puedes volver con el botón ✦ Archetype.</span>
-          <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Cancelar</button>
+        <div class="border-t border-border p-3 flex justify-between items-center gap-2">
+          <span class="text-xs text-muted hidden sm:inline">Cancelar = seguir como estás.</span>
+          <div class="flex gap-2">
+            <button id="arch-save-current" class="px-3 py-1.5 text-xs rounded bg-accent2/20 text-accent2 hover:bg-accent2/30" title="Captura tu workspace actual como archetype reusable">💾 Guardar workspace actual</button>
+            <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Cerrar</button>
+          </div>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -243,12 +256,17 @@ window.Archetypes = {
     modal.querySelectorAll('[data-close]').forEach(b => b.onclick = close);
     modal.onclick = e => { if (e.target === modal) close(); };
     modal.querySelectorAll('.arch-card').forEach(c => {
-      c.onclick = () => this._showDetail(c.dataset.id, modal);
+      c.onclick = () => this._showDetail(c.dataset.id, modal, c.dataset.custom === '1');
     });
+    modal.querySelector('#arch-save-current').onclick = () => {
+      this._saveCurrent();
+      close();
+      this.openPicker();
+    };
   },
 
-  _showDetail(id, parentModal) {
-    const a = this.LIST.find(x => x.id === id);
+  _showDetail(id, parentModal, isCustom = false) {
+    const a = (isCustom ? this._customs() : this.LIST).find(x => x.id === id);
     if (!a) return;
     parentModal.querySelector('.arch-card[data-id="' + id + '"]')?.scrollIntoView();
     const modal = document.createElement('div');
@@ -288,9 +306,15 @@ window.Archetypes = {
             <ul class="list-disc list-inside mt-1">${a.plan.prs.map(p => `<li>${escapeHtml(p.title)}</li>`).join('')}</ul>
           </div>
         </div>
-        <div class="border-t border-border p-3 flex justify-end gap-2">
-          <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Atrás</button>
-          <button data-apply class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Aplicar este archetype</button>
+        <div class="border-t border-border p-3 flex justify-between gap-2">
+          <div>
+            ${isCustom ? `<button data-delete class="px-3 py-1.5 text-xs rounded bg-danger/15 text-danger hover:bg-danger/30">Borrar</button>` : ''}
+            ${isCustom ? `<button data-export class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Exportar JSON</button>` : ''}
+          </div>
+          <div class="flex gap-2">
+            <button data-close class="px-3 py-1.5 text-xs rounded bg-panel2 hover:bg-border">Atrás</button>
+            <button data-apply class="px-3 py-1.5 text-xs rounded bg-accent hover:bg-accent/80 text-white">Aplicar este archetype</button>
+          </div>
         </div>
       </div>`;
     document.body.appendChild(modal);
@@ -302,6 +326,62 @@ window.Archetypes = {
       close();
       parentModal.remove();
     };
+    const delBtn = modal.querySelector('[data-delete]');
+    if (delBtn) delBtn.onclick = () => {
+      if (!confirm(`¿Borrar archetype custom "${a.name}"?`)) return;
+      const customs = this._customs().filter(c => c.id !== a.id);
+      SafeStorage.safeSet('shosso.custom-archetypes', customs);
+      close();
+      parentModal.remove();
+      this.openPicker();
+    };
+    const expBtn = modal.querySelector('[data-export]');
+    if (expBtn) expBtn.onclick = () => {
+      const blob = new Blob([JSON.stringify(a, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const aTag = document.createElement('a');
+      aTag.href = url;
+      aTag.download = `archetype-${a.id}.json`;
+      aTag.click();
+      URL.revokeObjectURL(url);
+    };
+  },
+
+  _saveCurrent() {
+    const name = prompt('Nombre del archetype custom:');
+    if (!name) return;
+    const tagline = prompt('Tagline corto (1 frase):', `Captura del workspace · ${new Date().toLocaleDateString()}`);
+    // Captura del estado actual
+    const skills = SkillsStore.skills.map(s => s.id);
+    const subAgents = AgentsStore.agents
+      .filter(a => a.type === 'sub')
+      .map(a => ({ name: a.name, role: a.role || '', skills: a.skills || [] }));
+    const memory = MemoryStore.items.slice(0, 20).map(m => m.text);
+    const plans = SafeStorage.safeGet('shosso.plans', []);
+    const lastPlan = plans[0];
+    const plan = lastPlan ? {
+      goal: lastPlan.goal,
+      tag: lastPlan.tag || 'engineering',
+      prs: lastPlan.prs.map(p => ({ title: p.title, body: p.body }))
+    } : {
+      goal: 'Workspace template',
+      tag: 'engineering',
+      prs: []
+    };
+    const archetype = {
+      id: 'custom-' + Date.now().toString(36),
+      name,
+      icon: '⭐',
+      tagline: tagline || `Captura del ${new Date().toLocaleDateString()}`,
+      skills, subAgents, memory, plan
+    };
+    const customs = this._customs();
+    customs.unshift(archetype);
+    SafeStorage.safeSet('shosso.custom-archetypes', customs.slice(0, 20));
+    MockAgent.log('system',
+      `⭐ Archetype custom <b>${escapeHtml(name)}</b> guardado.<br>` +
+      `${skills.length} skills · ${subAgents.length} sub-agentes · ${memory.length} memorias · ${plan.prs.length} PRs.<br>` +
+      `<span class="text-muted text-xs">Aplícalo en un workspace nuevo o expórtalo como JSON.</span>`);
   },
 
   // Aplica el archetype additive: añade skills/agentes/memoria/plan
