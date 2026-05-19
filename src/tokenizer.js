@@ -2,12 +2,21 @@ window.Tokenizer = {
   init() {
     const inp = document.getElementById('tk-input');
     if (!inp) return;
+    const charsEl = document.getElementById('tk-chars');
+    const tokensEl = document.getElementById('tk-tokens');
+    if (!charsEl || !tokensEl) return;
+    // Debounce so that a 10MB paste doesn't fire on every IME keystroke.
+    let timer = null;
     const update = () => {
+      timer = null;
       const s = inp.value;
-      document.getElementById('tk-chars').textContent = String(s.length);
-      document.getElementById('tk-tokens').textContent = String(estimateTokens(s));
+      charsEl.textContent = formatTokens(s.length);
+      tokensEl.textContent = formatTokens(estimateTokens(s));
     };
-    inp.addEventListener('input', update);
+    inp.addEventListener('input', () => {
+      if (timer) return;
+      timer = setTimeout(update, 60);
+    });
     update();
   }
 };
