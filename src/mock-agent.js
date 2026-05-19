@@ -12,7 +12,10 @@ window.MockAgent = {
     const wrap = document.getElementById('chat-log');
     const div = document.createElement('div');
     div.className = `msg msg-${role}`;
-    div.innerHTML = (meta ? `<div class="meta">${meta}</div>` : '') + html;
+    // meta es texto plano — siempre escapado por defensive en caso de
+    // que alguna llamada pase un objeto o caracteres especiales.
+    const metaSafe = meta != null ? escapeHtml(String(meta)) : null;
+    div.innerHTML = (metaSafe ? `<div class="meta">${metaSafe}</div>` : '') + html;
     wrap.appendChild(div);
     wrap.scrollTop = wrap.scrollHeight;
     if (role === 'agent' && window.Sycophancy) Sycophancy.wrap(div, html);

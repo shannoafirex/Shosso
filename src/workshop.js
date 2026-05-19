@@ -95,34 +95,47 @@ window.Workshop = {
   },
 
   _focusTab() {
-    // Auto-focus solo si el usuario NO está mirando chat activamente.
-    // Si está en chat, mostramos toast discreto en vez de robarle el foco.
     const wsBtn = document.querySelector('.bottom-tab[data-tab="workshop"]');
     const chatActive = document.querySelector('.bottom-tab[data-tab="chat"]')?.classList.contains('bg-panel2');
     if (!wsBtn) return;
-    if (wsBtn.classList.contains('bg-panel2')) return; // ya está activo
+    if (wsBtn.classList.contains('bg-panel2')) return;
     if (chatActive) {
-      // Notifica sin cambiar de tab
-      this._notify('▶ dispatch en Workshop — click para ver');
-      wsBtn.classList.add('workshop-pulse');
-      wsBtn.addEventListener('click', () => wsBtn.classList.remove('workshop-pulse'), { once: true });
+      this._notify('▶ dispatch en Workshop — click para ver', wsBtn);
       return;
     }
     wsBtn.click();
   },
 
-  _notify(text) {
-    // Banner discreto sobre el chat, auto-desaparece
+  _notify(text, wsBtn) {
+    // Limpia toast + pulse class anteriores
     if (this._toast) this._toast.remove();
+    if (this._pulseBtn) this._pulseBtn.classList.remove('workshop-pulse');
+    if (wsBtn) {
+      wsBtn.classList.add('workshop-pulse');
+      this._pulseBtn = wsBtn;
+      // Si el usuario click directamente en el tab, limpia pulse
+      wsBtn.addEventListener('click', () => wsBtn.classList.remove('workshop-pulse'), { once: true });
+    }
     const t = document.createElement('div');
     t.className = 'workshop-toast';
-    t.innerHTML = `${text} <button class="ml-2 underline">ir</button>`;
-    t.querySelector('button').onclick = () => {
+    t.textContent = text;
+    const btn = document.createElement('button');
+    btn.className = 'ml-2 underline';
+    btn.textContent = 'ir';
+    btn.onclick = () => {
       document.querySelector('.bottom-tab[data-tab="workshop"]')?.click();
       t.remove();
     };
+    t.appendChild(btn);
     document.body.appendChild(t);
     this._toast = t;
-    setTimeout(() => t.remove(), 4500);
+    setTimeout(() => {
+      t.remove();
+      // Limpia pulse cuando toast desaparece, no antes
+      if (this._pulseBtn) {
+        this._pulseBtn.classList.remove('workshop-pulse');
+        this._pulseBtn = null;
+      }
+    }, 4500);
   }
 };
