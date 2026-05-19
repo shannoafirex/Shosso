@@ -11,6 +11,18 @@ html, body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", R
 /* Tabs */
 .left-tab, .bottom-tab, .right-tab { color: #8a93a6; cursor: pointer; }
 .left-tab:hover, .bottom-tab:hover, .right-tab:hover { color: #fff; }
+.left-tab[aria-selected="true"], .bottom-tab[aria-selected="true"], .right-tab[aria-selected="true"] { color: #fff; }
+
+/* Keyboard focus: Tailwind reset strips the default ring, so we add a
+   subtle accent outline for keyboard users only. */
+:focus-visible {
+  outline: 2px solid #7c5cff;
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+button:focus-visible, [role="tab"]:focus-visible {
+  outline-color: #22d3ee;
+}
 
 /* File tree spacing */
 #file-tree li { line-height: 1.4; }

@@ -178,11 +178,11 @@
   </footer>
 
   <!-- Settings modal -->
-  <div id="settings-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+  <div id="settings-modal" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title" aria-hidden="true">
     <div class="bg-panel border border-border rounded-lg w-full max-w-lg flex flex-col">
       <div class="flex items-center justify-between border-b border-border px-4 py-3">
-        <h3 class="font-semibold">Ajustes</h3>
-        <button data-close class="text-muted hover:text-white">✕</button>
+        <h3 id="settings-modal-title" class="font-semibold">Ajustes</h3>
+        <button data-close aria-label="Cerrar ajustes" class="text-muted hover:text-white">✕</button>
       </div>
       <div class="p-4 space-y-4 text-sm">
         <div>
