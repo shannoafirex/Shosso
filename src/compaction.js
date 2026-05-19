@@ -18,8 +18,12 @@ window.Compaction = {
     this.running = true;
     const btn = document.getElementById('ctx-compact');
     if (btn) { btn.disabled = true; btn.textContent = 'Compactando…'; }
+    // Snapshot conversation before mutating — a failed/aborted summary must
+    // leave Context.conversation exactly as we found it.
+    const snapshot = Context.conversation.slice();
     try {
-      const summary = await Agent.summarizeConversation(Context.conversation);
+      const summary = await Agent.summarizeConversation(snapshot);
+      if (!summary || !summary.trim()) throw new Error('resumen vacío');
       // Replace history with a single user/assistant pair containing the
       // summary. Preserving the tail is unsafe — a trailing tool_result
       // without its preceding tool_use would make the next request invalid.
@@ -30,6 +34,9 @@ window.Compaction = {
       Context.refresh();
       Agent.appendChat('system', `🗜 Conversación compactada. Resumen guardado como primer turno.`);
     } catch (err) {
+      // Restore the original conversation on any failure (incl. user abort).
+      Context.conversation = snapshot;
+      Context.refresh();
       Agent.appendChat('system', `⚠ No pude compactar: ${escapeHtml(err.message)}`);
     } finally {
       this.running = false;

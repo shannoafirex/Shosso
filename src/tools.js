@@ -132,30 +132,62 @@ window.Tools = (() => {
     }
   ];
 
-  // Minimal required-args validation. Without it a malformed LLM call
-  // can write "undefined" to disk or read a directory as a file.
-  const REQUIRED = {
-    read_file: ['path'],
-    write_file: ['path', 'content'],
-    edit_file: ['path', 'old_string', 'new_string'],
-    list_dir: [],
-    glob: [],
-    grep: ['pattern'],
-    bash: ['command'],
-    git: ['sub'],
-    remember: ['fact'],
-    recall: ['query']
+  // Per-tool argument schema: required keys + expected primitive type. The
+  // type check catches LLM calls that pass numbers for paths, arrays for
+  // commands, etc., which would otherwise crash deep in the IPC handlers.
+  const SCHEMA = {
+    read_file:  { path: { required: true, type: 'string' } },
+    write_file: { path: { required: true, type: 'string' }, content: { required: true, type: 'string' } },
+    edit_file:  { path: { required: true, type: 'string' }, old_string: { required: true, type: 'string' }, new_string: { required: true, type: 'string' } },
+    list_dir:   { path: { type: 'string' } },
+    glob:       { root: { type: 'string' }, ext: { type: 'string' } },
+    grep:       { pattern: { required: true, type: 'string' }, root: { type: 'string' }, ignore_case: { type: 'boolean' } },
+    bash:       { command: { required: true, type: 'string' }, cwd: { type: 'string' } },
+    git:        { sub: { required: true, type: 'string' }, file: { type: 'string' } },
+    remember:   { fact: { required: true, type: 'string' } },
+    recall:     { query: { required: true, type: 'string' } }
   };
+  // Known tool names — anything outside this list is rejected before we
+  // even look up SCHEMA, to prevent prototype-key spoofing
+  // (e.g. tool name '__proto__' / 'constructor' would otherwise resolve
+  // to inherited object properties and break for...of iteration).
+  const KNOWN = new Set(Object.keys(SCHEMA));
+  const MAX_BASH_LEN = 16_000;
 
-  async function execute(name, args) {
-    args = args || {};
-    const need = REQUIRED[name];
-    if (need) {
-      for (const k of need) {
-        if (args[k] === undefined || args[k] === null) {
-          return { error: `tool ${name}: argumento requerido "${k}" no provisto` };
-        }
+  // Reject input objects with prototype-pollution keys. tu.input comes
+  // straight from the LLM; even though JSON.parse strips __proto__ in modern
+  // runtimes, OpenAI's tool_calls.arguments arrive as a string we re-parse
+  // upstream and the LLM can also literally request prototype property access
+  // by key name.
+  function sanitizeArgs(args) {
+    if (!args || typeof args !== 'object') return {};
+    const clean = Object.create(null);
+    for (const k of Object.keys(args)) {
+      if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+      clean[k] = args[k];
+    }
+    return clean;
+  }
+
+  async function execute(name, rawArgs) {
+    if (typeof name !== 'string' || !Object.prototype.hasOwnProperty.call(SCHEMA, name) || !KNOWN.has(name)) {
+      return { error: 'tool desconocida: ' + String(name) };
+    }
+    const args = sanitizeArgs(rawArgs);
+    const schema = SCHEMA[name];
+    for (const k of Object.keys(schema)) {
+      const spec = schema[k];
+      const v = args[k];
+      if (v === undefined || v === null) {
+        if (spec.required) return { error: `tool ${name}: argumento requerido "${k}" no provisto` };
+        continue;
       }
+      if (spec.type && typeof v !== spec.type) {
+        return { error: `tool ${name}: argumento "${k}" debe ser ${spec.type}, no ${typeof v}` };
+      }
+    }
+    if (name === 'bash' && args.command.length > MAX_BASH_LEN) {
+      return { error: `tool bash: comando demasiado largo (${args.command.length} > ${MAX_BASH_LEN} chars)` };
     }
     switch (name) {
       case 'read_file': {
@@ -178,10 +210,21 @@ window.Tools = (() => {
         const p = path.resolve(args.path);
         const r = await window.shosso.fs.readFile(p);
         if (r.error) return { error: r.error };
-        const occ = r.content.split(args.old_string).length - 1;
+        let occ = r.content.split(args.old_string).length - 1;
+        let oldStr = args.old_string;
+        let newStr = args.new_string;
+        // CRLF tolerance: LLM tools strip carriage returns; if no direct match
+        // and the file uses CRLF, retry with line endings normalized to match
+        // the file. We rewrite the whole file content with the same EOL style
+        // it already has, so we don't accidentally flip the file from CRLF→LF.
+        if (occ === 0 && r.content.includes('\r\n') && !args.old_string.includes('\r\n')) {
+          oldStr = args.old_string.replace(/\n/g, '\r\n');
+          newStr = args.new_string.replace(/\n/g, '\r\n');
+          occ = r.content.split(oldStr).length - 1;
+        }
         if (occ === 0) return { error: 'old_string no encontrado en ' + args.path };
         if (occ > 1) return { error: `old_string aparece ${occ} veces; añade más contexto para hacerla única` };
-        const updated = r.content.replace(args.old_string, args.new_string);
+        const updated = r.content.replace(oldStr, newStr);
         const w = await window.shosso.fs.writeFile(p, updated);
         if (w.error) return { error: w.error };
         document.dispatchEvent(new CustomEvent('shosso:fileWritten', { detail: path.resolve(args.path) }));

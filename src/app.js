@@ -1,43 +1,56 @@
 // Bootstrap: wire everything together.
 (async function main() {
-  await Settings.init();
-  await Projects.init();
-  await Editor.init();
-  await Terminal.init();
-  await GitPanel.init();
-  await SkillsStore.init();
-  MemoryStore.init();
-  Context.init();
-  Tokenizer.init();
-  Agent.init();
+  // Each init is isolated: a failure in one module must not prevent the
+  // rest from coming up (partial functionality > blank window).
+  const steps = [
+    ['Settings',    () => Settings.init()],
+    ['Projects',    () => Projects.init()],
+    ['Editor',      () => Editor.init()],
+    ['Terminal',    () => Terminal.init()],
+    ['GitPanel',    () => GitPanel.init()],
+    ['SkillsStore', () => SkillsStore.init()],
+    ['MemoryStore', () => MemoryStore.init()],
+    ['Context',     () => Context.init()],
+    ['Tokenizer',   () => Tokenizer.init()],
+    ['Agent',       () => Agent.init()],
+  ];
+  for (const [name, fn] of steps) {
+    try { await fn(); }
+    catch (err) {
+      console.error(`[shosso] ${name}.init() failed:`, err);
+      try {
+        const log = document.getElementById('agent-logs');
+        if (log) log.innerHTML += `<div class="text-danger">[init] ${name} failed: ${(err && err.message) || err}</div>`;
+      } catch {}
+    }
+  }
 
-  // Tabs (bottom, left, right)
-  document.querySelectorAll('.bottom-tab').forEach(b => {
-    b.onclick = () => {
-      document.querySelectorAll('.bottom-tab').forEach(x => x.classList.remove('bg-panel2'));
-      b.classList.add('bg-panel2');
-      const tab = b.dataset.tab;
-      document.querySelectorAll('.bottom-panel').forEach(p =>
-        p.classList.toggle('hidden', p.dataset.panel !== tab));
-      if (tab === 'terminal') Terminal.focus();
-    };
+  // Tabs (bottom, left, right). Generic activator updates ARIA + classes.
+  function wireTabs(tabSel, panelSel, dataAttr, panelAttr, onActivate) {
+    const tabs = document.querySelectorAll(tabSel);
+    const panels = document.querySelectorAll(panelSel);
+    tabs.forEach(b => {
+      b.onclick = () => {
+        const key = b.dataset[dataAttr];
+        tabs.forEach(x => {
+          const active = x === b;
+          x.classList.toggle('bg-panel2', active);
+          x.setAttribute('aria-selected', active ? 'true' : 'false');
+          x.tabIndex = active ? 0 : -1;
+        });
+        panels.forEach(p => {
+          const show = p.dataset[panelAttr] === key;
+          p.classList.toggle('hidden', !show);
+        });
+        if (onActivate) onActivate(key);
+      };
+    });
+  }
+  wireTabs('.bottom-tab', '.bottom-panel', 'tab', 'panel', tab => {
+    if (tab === 'terminal') { try { Terminal.focus(); } catch {} }
   });
-  document.querySelectorAll('.left-tab').forEach(b => {
-    b.onclick = () => {
-      document.querySelectorAll('.left-tab').forEach(x => x.classList.remove('bg-panel2'));
-      b.classList.add('bg-panel2');
-      document.querySelectorAll('.left-panel').forEach(p =>
-        p.classList.toggle('hidden', p.dataset.leftPanel !== b.dataset.leftTab));
-    };
-  });
-  document.querySelectorAll('.right-tab').forEach(b => {
-    b.onclick = () => {
-      document.querySelectorAll('.right-tab').forEach(x => x.classList.remove('bg-panel2'));
-      b.classList.add('bg-panel2');
-      document.querySelectorAll('.right-panel').forEach(p =>
-        p.classList.toggle('hidden', p.dataset.rightPanel !== b.dataset.rightTab));
-    };
-  });
+  wireTabs('.left-tab', '.left-panel', 'lefttab', 'leftpanel');
+  wireTabs('.right-tab', '.right-panel', 'righttab', 'rightpanel');
 
   document.getElementById('btn-open-folder').onclick = async () => {
     const dir = await window.shosso.app.pickFolder();
@@ -75,11 +88,11 @@
     if (!modal.classList.contains('hidden')) Settings.close();
   });
 
-  // Initial render
+  // Initial render. Projects.init() only loads lastFolder from settings; it
+  // does NOT dispatch rootChanged, so we fire it here so every module that
+  // listens (editor, git, skills, memory, terminal cwd) gets notified.
   if (Projects.root) {
-    Editor._renderFileTree();
-    GitPanel.refresh();
-    SkillsStore.reload();
+    document.dispatchEvent(new CustomEvent('shosso:rootChanged', { detail: Projects.root }));
   } else {
     Agent.appendChat('system',
       `Bienvenido a Shosso.<br>` +

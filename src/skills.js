@@ -7,40 +7,75 @@ window.SkillsStore = {
   skills: [], // { id, name, description, body, path }
   filter: '',
 
+  _reloadSeq: 0,
+
   async init() {
     document.addEventListener('shosso:rootChanged', () => this.reload());
+    // Files created/edited externally (vim, agent tool) won't notify us.
+    // Reload on window focus so the list stays in sync without polling.
+    // Debounced so a rapid alt-tab burst doesn't trigger N readDirs.
+    let focusTimer = null;
+    window.addEventListener('focus', () => {
+      clearTimeout(focusTimer);
+      focusTimer = setTimeout(() => this.reload(), 150);
+    });
     await this.reload();
   },
 
   async reload() {
-    this.skills = [];
-    if (!Projects.root) { this.render(); return; }
+    // Token guard: rapid rootChanged → reload calls would otherwise let
+    // a slower readDir overwrite a newer one with stale results.
+    const seq = ++this._reloadSeq;
+    if (!Projects.root) { this.skills = []; this.render(); return; }
     const dir = Projects.root + '/.shosso/skills';
     const r = await window.shosso.fs.readDir(dir);
-    if (!Array.isArray(r)) { this.render(); return; } // not created yet
+    if (seq !== this._reloadSeq) return;
+    if (!Array.isArray(r)) { this.skills = []; this.render(); return; }
+    const collected = [];
     for (const e of r) {
-      if (e.isDir || !e.name.endsWith('.md')) continue;
+      if (e.isDir || !e.name.toLowerCase().endsWith('.md')) continue;
       const file = await window.shosso.fs.readFile(e.path);
+      if (seq !== this._reloadSeq) return;
       if (file.error) continue;
-      this.skills.push(this._parse(e.path, file.content));
+      collected.push(this._parse(e.path, file.content));
     }
+    if (seq !== this._reloadSeq) return;
+    this.skills = collected;
     this.render();
   },
 
   _parse(filePath, content) {
-    // Frontmatter: --- name / description --- body
-    const m = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/);
-    let name = filePath.split(/[/\\]/).pop().replace(/\.md$/, '');
+    // Tolerate: UTF-8 BOM, CRLF endings, tabs around the key/value
+    // separator, and frontmatter where the closing `---` is missing or
+    // followed by EOF rather than a newline. Values may contain ":"
+    // (e.g. "name: foo: bar") — we only split on the first colon.
+    if (content.charCodeAt(0) === 0xFEFF) content = content.slice(1);
+    // Normalize line endings for our regex; preserve in body via a
+    // post-step so saved files don't get reformatted unintentionally.
+    const norm = content.replace(/\r\n?/g, '\n');
+    let name = filePath.split(/[/\\]/).pop().replace(/\.md$/i, '');
     let description = '';
     let body = content;
+    // Closing fence may be followed by \n OR end-of-file.
+    const m = norm.match(/^---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n([\s\S]*)|$)/);
     if (m) {
-      for (const line of m[1].split('\n')) {
-        const [k, ...rest] = line.split(':');
-        const v = rest.join(':').trim();
-        if (k.trim().toLowerCase() === 'name') name = v;
-        if (k.trim().toLowerCase() === 'description') description = v;
+      for (const rawLine of m[1].split('\n')) {
+        // Skip blank and YAML comment lines.
+        const line = rawLine.replace(/^﻿/, '');
+        if (!line.trim() || /^\s*#/.test(line)) continue;
+        const sep = line.indexOf(':');
+        if (sep < 0) continue;
+        const k = line.slice(0, sep).trim().toLowerCase();
+        let v = line.slice(sep + 1).trim();
+        // Strip wrapping quotes if user added them.
+        if ((v.startsWith('"') && v.endsWith('"')) ||
+            (v.startsWith("'") && v.endsWith("'"))) {
+          v = v.slice(1, -1);
+        }
+        if (k === 'name' && v) name = v;
+        else if (k === 'description') description = v;
       }
-      body = m[2];
+      body = m[2] != null ? m[2] : '';
     }
     return { id: filePath, name, description, body, path: filePath };
   },

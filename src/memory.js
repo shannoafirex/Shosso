@@ -17,12 +17,42 @@ window.MemoryStore = {
     });
   },
 
+  _normRoot(p) {
+    if (!p) return '__no_root__';
+    let s = String(p).replace(/\\/g, '/');
+    if (s.length > 1 && /\/$/.test(s) && !/^[a-zA-Z]:\/$/.test(s)) {
+      s = s.replace(/\/+$/, '');
+    }
+    return s;
+  },
+
   _key() {
-    return 'shosso.memory.' + (Projects.root || '__no_root__');
+    return 'shosso.memory.' + this._normRoot(Projects.root);
   },
 
   reload() {
-    this.items = SafeStorage.safeGet(this._key(), []);
+    // Migrate any legacy key written before path normalization (e.g.
+    // "/foo/" with trailing slash) into the normalized bucket so the
+    // user doesn't appear to lose facts after this update.
+    const target = this._key();
+    const stored = SafeStorage.safeGet(target, []);
+    if (Projects.root) {
+      const raw = String(Projects.root);
+      const alt1 = 'shosso.memory.' + raw;
+      const alt2 = 'shosso.memory.' + raw.replace(/\\/g, '/');
+      for (const altKey of [alt1, alt2]) {
+        if (altKey === target) continue;
+        const legacy = SafeStorage.safeGet(altKey, null);
+        if (Array.isArray(legacy) && legacy.length) {
+          // Merge: prepend legacy items that aren't already present (by id).
+          const knownIds = new Set(stored.map(m => m.id));
+          for (const m of legacy) if (!knownIds.has(m.id)) stored.push(m);
+          SafeStorage.safeSet(target, stored);
+          try { localStorage.removeItem(altKey); } catch (_) {}
+        }
+      }
+    }
+    this.items = stored;
     this.render();
   },
 
