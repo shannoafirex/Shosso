@@ -1,0 +1,54 @@
+// Persistencia del historial del chat.
+// Las skills, agentes, memoria, etc. ya se persisten. Faltaba el chat —
+// el usuario perdía toda la conversación al recargar.
+//
+// Diseño: guardamos el HTML de cada mensaje + metadata, hasta un cap. Al
+// iniciar restauramos. No re-procesamos (no recalculamos tokens) — la
+// conversación es archivo.
+
+window.ChatPersistence = {
+  CAP: 200,
+  KEY: 'shosso.chat.history',
+
+  save(role, html, meta) {
+    const list = this._read();
+    list.push({ role, html, meta, ts: Date.now() });
+    if (list.length > this.CAP) list.splice(0, list.length - this.CAP);
+    localStorage.setItem(this.KEY, JSON.stringify(list));
+  },
+
+  _read() {
+    try { return JSON.parse(localStorage.getItem(this.KEY) || '[]'); }
+    catch { return []; }
+  },
+
+  clear() {
+    localStorage.removeItem(this.KEY);
+  },
+
+  restore() {
+    const list = this._read();
+    if (list.length === 0) return false;
+    const wrap = document.getElementById('chat-log');
+    if (!wrap) return false;
+    wrap.innerHTML = '';
+    for (const m of list) {
+      const div = document.createElement('div');
+      div.className = `msg msg-${m.role}`;
+      div.innerHTML = (m.meta ? `<div class="meta">${escapeHtml(m.meta)}</div>` : '') + m.html;
+      wrap.appendChild(div);
+    }
+    wrap.scrollTop = wrap.scrollHeight;
+    // Añade banner discreto
+    const banner = document.createElement('div');
+    banner.className = 'msg msg-system';
+    banner.innerHTML = `📂 Sesión restaurada · <b>${list.length}</b> mensajes <button id="clear-history" class="ml-2 text-[10px] underline text-warn hover:text-danger">borrar historial</button>`;
+    wrap.insertBefore(banner, wrap.firstChild);
+    document.getElementById('clear-history').onclick = () => {
+      this.clear();
+      wrap.innerHTML = '';
+      Context.log('Historial de chat borrado.');
+    };
+    return true;
+  }
+};

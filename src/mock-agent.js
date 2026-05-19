@@ -16,6 +16,7 @@ window.MockAgent = {
     wrap.appendChild(div);
     wrap.scrollTop = wrap.scrollHeight;
     if (role === 'agent' && window.Sycophancy) Sycophancy.wrap(div, html);
+    if (window.ChatPersistence) ChatPersistence.save(role, html, meta);
     return div;
   },
 

@@ -50,6 +50,8 @@ function init() {
   Planner.init();
   NewThread.init();
   KnowledgeWork.init();
+  Workshop.init();
+  I18N.init();
   Tutorial.init();
   ImportSkill.init();
   setupTerminal();
@@ -69,7 +71,9 @@ function init() {
   setupTabs();
   setupListeners();
   setupElectronBridge();
-  greet();
+  // Restaurar historial; sólo saludamos si está vacío
+  const restored = ChatPersistence.restore();
+  if (!restored) greet();
 }
 
 function loadFiles() {

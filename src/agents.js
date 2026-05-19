@@ -19,6 +19,7 @@ window.AgentsStore = {
     this.persist();
     this.render();
     if (window.Productivity) Productivity.refresh();
+    if (window.Workshop) Workshop.render();
   },
 
   remove(id) {
@@ -27,6 +28,7 @@ window.AgentsStore = {
     this.persist();
     this.render();
     if (window.Productivity) Productivity.refresh();
+    if (window.Workshop) Workshop.render();
   },
 
   render() {

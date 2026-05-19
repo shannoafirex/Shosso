@@ -40,21 +40,25 @@ window.Dispatcher = {
   },
 
   async _runOne(agent, task) {
-    const startMsg = this._line(agent, '⏳ working…', 'text-muted');
     const ms = 800 + Math.random() * 1800;
+    const skill = (agent.skills || [])[0];
+    // Workshop: cada sub-agente tiene su columna.
+    if (window.Workshop) Workshop.startRun(agent.id, task);
+    // Fallback en chat: una línea breve por agente.
+    const startMsg = this._line(agent, '⏳ working…', 'text-muted');
     await MockAgent.sleep(ms);
     const ok = Math.random() > 0.15;
-    const skill = (agent.skills || [])[0];
     if (ok) {
       const out = this._mockOutput(agent, skill, task);
       startMsg.innerHTML = `<b>[${escapeHtml(agent.name)}]</b> ✓ ${(ms/1000).toFixed(1)}s` +
-        (skill ? ` · skill: <code>${escapeHtml(skill)}</code>` : '') +
-        `<div class="text-muted mt-0.5">${out}</div>`;
+        (skill ? ` · skill: <code>${escapeHtml(skill)}</code>` : '');
       startMsg.className = 'text-xs';
       Context.addConversationTokens(estimateTokens(out));
+      if (window.Workshop) Workshop.endRun(agent.id, { ok, ms, output: out, skill });
     } else {
-      startMsg.innerHTML = `<b>[${escapeHtml(agent.name)}]</b> ⚠ fallo tras ${(ms/1000).toFixed(1)}s — registrado en diagnóstico`;
+      startMsg.innerHTML = `<b>[${escapeHtml(agent.name)}]</b> ⚠ fallo tras ${(ms/1000).toFixed(1)}s — diagnóstico capturado`;
       startMsg.className = 'text-xs text-warn';
+      if (window.Workshop) Workshop.endRun(agent.id, { ok, ms });
       if (skill && SkillsStore.get(skill)) {
         Diagnostics.capture({
           skillId: skill,

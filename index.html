@@ -34,13 +34,17 @@
     <div class="flex items-center gap-3">
       <div class="w-7 h-7 rounded-md bg-gradient-to-br from-accent to-accent2 flex items-center justify-center font-bold text-sm">S</div>
       <h1 class="font-semibold tracking-tight">Shosso</h1>
-      <span class="text-xs text-muted hidden md:inline">IDE nativo de skills · context-aware</span>
-      <span id="model-pill" class="hidden md:inline text-[10px] uppercase tracking-wider bg-success/15 text-success px-2 py-0.5 rounded-full">modelo: bueno</span>
+      <span class="text-xs text-muted hidden md:inline" data-i18n="tagline">IDE nativo de skills · context-aware</span>
+      <span id="model-pill" class="hidden md:inline text-[10px] uppercase tracking-wider bg-success/15 text-success px-2 py-0.5 rounded-full" data-i18n="model.good">modelo: bueno</span>
       <span id="motto" class="hidden lg:inline text-[11px] text-accent2 italic transition-opacity duration-300 max-w-xs truncate"></span>
     </div>
     <div class="flex items-center gap-4">
+      <select id="lang-switch" class="bg-panel2 border border-border rounded text-[10px] px-1 py-0.5 outline-none" title="Idioma · Language">
+        <option value="es">ES</option>
+        <option value="en">EN</option>
+      </select>
       <div id="productivity-pill" class="hidden sm:flex items-center gap-2 text-xs">
-        <span class="text-muted">Productividad</span>
+        <span class="text-muted" data-i18n="productivity">Productividad</span>
         <span id="productivity-score" class="font-mono px-2 py-0.5 rounded bg-panel2">—</span>
       </div>
       <div class="hidden sm:flex flex-col text-xs">
@@ -85,17 +89,18 @@
       <div id="editor" class="flex-1"></div>
       <div class="h-52 border-t border-border bg-panel">
         <div class="flex items-center border-b border-border">
-          <button data-tab="chat" class="bottom-tab px-3 py-1.5 text-xs border-r border-border bg-panel2">Chat con el agente</button>
-          <button data-tab="terminal" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Terminal (mock)</button>
-          <button data-tab="logs" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Logs de contexto</button>
-          <button data-tab="diagnostics" class="bottom-tab px-3 py-1.5 text-xs border-r border-border">Diagnóstico de fallos</button>
+          <button data-tab="chat" class="bottom-tab px-3 py-1.5 text-xs border-r border-border bg-panel2" data-i18n="bottom.chat">Chat con el agente</button>
+          <button data-tab="terminal" class="bottom-tab px-3 py-1.5 text-xs border-r border-border" data-i18n="bottom.terminal">Terminal (mock)</button>
+          <button data-tab="logs" class="bottom-tab px-3 py-1.5 text-xs border-r border-border" data-i18n="bottom.logs">Logs de contexto</button>
+          <button data-tab="diagnostics" class="bottom-tab px-3 py-1.5 text-xs border-r border-border" data-i18n="bottom.diagnostics">Diagnóstico de fallos</button>
+          <button data-tab="workshop" class="bottom-tab px-3 py-1.5 text-xs border-r border-border" data-i18n="bottom.workshop">Workshop (paralelo)</button>
           <span id="compaction-badge" class="hidden ml-auto mr-2 text-[10px] px-2 py-0.5 rounded-full bg-warn/20 text-warn animate-pulse">⚠ compactación cerca</span>
         </div>
         <div id="bottom-panels" class="h-[calc(100%-2rem)]">
           <div data-panel="chat" class="bottom-panel h-full flex flex-col">
             <div id="chat-log" class="flex-1 overflow-y-auto p-3 space-y-2 text-sm flex flex-col"></div>
             <form id="chat-form" class="flex items-center border-t border-border">
-              <input id="chat-input" type="text" placeholder="Pídele algo al agente… (ej: 'genera reporte semanal', 'investiga este patrocinador')" class="flex-1 bg-transparent px-3 py-2 text-sm outline-none" autocomplete="off" />
+              <input id="chat-input" type="text" placeholder="Pídele algo al agente… (ej: 'genera reporte semanal', 'investiga este patrocinador')" data-i18n="chat.placeholder" class="flex-1 bg-transparent px-3 py-2 text-sm outline-none" autocomplete="off" />
               <button class="px-3 text-xs text-accent2 hover:text-white">Enviar</button>
             </form>
           </div>
@@ -116,6 +121,13 @@
           </div>
           <div data-panel="logs" class="bottom-panel hidden h-full p-3 font-mono text-xs overflow-y-auto" id="ctx-logs"></div>
           <div data-panel="diagnostics" class="bottom-panel hidden h-full p-3 overflow-y-auto" id="diagnostics-panel"></div>
+          <div data-panel="workshop" class="bottom-panel hidden h-full flex flex-col">
+            <div class="flex items-center justify-between px-3 py-1.5 border-b border-border">
+              <span class="text-xs text-muted">Sub-agentes en paralelo · cada columna es un thread independiente</span>
+              <button id="btn-clear-workshop" class="text-[10px] px-2 py-0.5 rounded bg-panel2 hover:bg-border">Limpiar</button>
+            </div>
+            <div id="workshop-grid" class="flex-1 overflow-auto p-2 gap-2 grid"></div>
+          </div>
         </div>
       </div>
     </section>
@@ -123,15 +135,15 @@
     <!-- Right: Skills / Agents / Context / Tokenizer / System / Memory -->
     <aside class="col-span-3 border-l border-border bg-panel flex flex-col">
       <nav class="flex border-b border-border overflow-x-auto whitespace-nowrap">
-        <button data-tab="skills" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide bg-panel2">Skills</button>
-        <button data-tab="agents" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Agentes</button>
-        <button data-tab="plan" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Plan</button>
-        <button data-tab="context" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Contexto</button>
-        <button data-tab="memory" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Memoria</button>
-        <button data-tab="tokenizer" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Tokens</button>
-        <button data-tab="system" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Sistema</button>
-        <button data-tab="security" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Seguridad</button>
-        <button data-tab="philosophy" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide">Filosofía</button>
+        <button data-tab="skills" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide bg-panel2" data-i18n="tab.skills">Skills</button>
+        <button data-tab="agents" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.agents">Agentes</button>
+        <button data-tab="plan" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.plan">Plan</button>
+        <button data-tab="context" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.context">Contexto</button>
+        <button data-tab="memory" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.memory">Memoria</button>
+        <button data-tab="tokenizer" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.tokenizer">Tokens</button>
+        <button data-tab="system" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.system">Sistema</button>
+        <button data-tab="security" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.security">Seguridad</button>
+        <button data-tab="philosophy" class="side-tab px-3 py-2 text-[11px] uppercase tracking-wide" data-i18n="tab.philosophy">Filosofía</button>
       </nav>
       <div class="flex-1 overflow-y-auto">
         <!-- Plan panel -->
@@ -380,8 +392,11 @@
   <script src="src/opensource.js"></script>
   <script src="src/new-thread.js"></script>
   <script src="src/dispatcher.js"></script>
+  <script src="src/workshop.js"></script>
   <script src="src/knowledge-work.js"></script>
   <script src="src/demo.js"></script>
+  <script src="src/i18n.js"></script>
+  <script src="src/chat-persistence.js"></script>
   <script src="src/mock-agent.js"></script>
   <script src="src/skill-builder.js"></script>
   <script src="src/tutorial.js"></script>
