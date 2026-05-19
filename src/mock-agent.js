@@ -75,6 +75,7 @@ window.MockAgent = {
       `Cargando el cuerpo: <b>+${estimateTokens(skill.body)}t</b>.`);
     if (!skill.loaded) {
       skill.loaded = true;
+      skill.expandOnRender = true; // visualízalo al usuario
       SkillsStore.persist();
       SkillsStore.render();
       Context.refresh();
@@ -112,15 +113,19 @@ window.MockAgent = {
     Context.addConversationTokens(estimateTokens(response));
   },
 
+  _normalize(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  },
+
   _matchSkill(text) {
-    const t = text.toLowerCase();
+    const t = this._normalize(text);
     const rules = [
-      { id: 'sponsor-research', keys: ['patrocinador', 'sponsor', 'auspicia', 'auspiciante'] },
-      { id: 'code-structure',   keys: ['estructura', 'refactor', 'limpia el código', 'organiza el código', 'code-structure'] },
-      { id: 'weekly-report',    keys: ['reporte semanal', 'weekly', 'reporte de la semana', 'reporte'] }
+      { id: 'sponsor-research', keys: ['patrocin', 'sponsor', 'auspici', 'brand deal', 'colabora'] },
+      { id: 'code-structure',   keys: ['estructur', 'refactor', 'limpi', 'organiz', 'code-structure', 'reorgan', 'service layer'] },
+      { id: 'weekly-report',    keys: ['reporte semanal', 'weekly', 'reporte de la semana', 'reporte', 'metricas semanales', 'kpis'] }
     ];
     for (const r of rules) {
-      if (r.keys.some(k => t.includes(k))) {
+      if (r.keys.some(k => t.includes(this._normalize(k)))) {
         if (SkillsStore.get(r.id)) return r.id;
       }
     }

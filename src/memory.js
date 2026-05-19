@@ -44,11 +44,30 @@ window.MemoryStore = {
   },
 
   // Recupera ítems de memoria relevantes a un texto, simulando un retrieval.
+  ALIASES: {
+    'patrocin': ['sponsor', 'brand', 'auspici', 'colabora'],
+    'sponsor': ['patrocin', 'auspici'],
+    'horario': ['hora', 'tiempo', 'zona', 'timezone'],
+    'zona': ['horaria', 'timezone'],
+  },
+
+  _normalize(s) {
+    return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  },
+
   recall(query) {
-    const q = query.toLowerCase();
+    const q = this._normalize(query);
+    const words = q.split(/[\s,.;:!?¡¿]+/).filter(w => w.length > 2);
+    const expanded = new Set(words);
+    for (const w of words) {
+      for (const [root, aliases] of Object.entries(this.ALIASES)) {
+        if (w.includes(root)) aliases.forEach(a => expanded.add(a));
+      }
+    }
     const hits = this.items.filter(m => {
-      const t = m.text.toLowerCase();
-      return q.split(/\s+/).some(w => w.length > 3 && t.includes(w));
+      const t = this._normalize(m.text);
+      for (const w of expanded) if (t.includes(w)) return true;
+      return false;
     });
     hits.forEach(h => h.recalls++);
     if (hits.length) {

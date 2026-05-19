@@ -299,9 +299,25 @@ function setupElectronBridge() {
 }
 
 function greet() {
-  MockAgent.log('system',
+  const examples = [
+    { label: 'investiga este auspicio', tag: 'skill' },
+    { label: 'genera reporte semanal', tag: 'skill' },
+    { label: 'estructura este código', tag: 'skill' },
+    { label: '/grebloop PR del checkout', tag: 'cmd' },
+    { label: '/goal app desplegada con pagos', tag: 'cmd' },
+    { label: 'am I cooked', tag: 'security' },
+    { label: 'food at home', tag: 'easter' },
+    { label: 'rundown de finanzas', tag: 'easter' }
+  ];
+  const chips = examples.map(e =>
+    `<button class="example-chip" data-text="${escapeHtml(e.label)}" title="tipo: ${e.tag}">${escapeHtml(e.label)}</button>`
+  ).join(' ');
+  const el = MockAgent.log('system',
     `Bienvenido a Shosso. Tengo <b>${SkillsStore.skills.length}</b> skills visibles (sólo nombre+desc en mi contexto, <b>${SkillsStore.metadataTokens()}t</b> en total).<br>` +
-    `Pruébame con: <i>"investiga este patrocinador"</i>, <i>"genera reporte semanal"</i>, <i>"estructura este código"</i>, <i>"rundown de finanzas"</i> (easter egg).`);
+    `Haz click en cualquiera para probar:<br><div class="mt-2 flex flex-wrap gap-1">${chips}</div>`);
+  el.querySelectorAll('.example-chip').forEach(b => {
+    b.addEventListener('click', () => MockAgent.send(b.dataset.text));
+  });
 }
 
 // Re-render terminal cada vez que cambian las skills.

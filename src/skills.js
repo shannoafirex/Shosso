@@ -35,6 +35,7 @@ window.SkillsStore = {
     const s = this.get(id);
     if (!s) return;
     s.loaded = !s.loaded;
+    s.expandOnRender = s.loaded; // auto-expandir al cargar para que se VEA qué entró
     this.persist();
     this.render();
     Context.refresh();
@@ -64,7 +65,8 @@ window.SkillsStore = {
     }
     for (const s of this.skills) {
       const li = document.createElement('li');
-      li.className = 'skill-card' + (s.loaded ? ' loaded' : '');
+      li.className = 'skill-card' + (s.loaded ? ' loaded' : '') + (s.expandOnRender ? ' expanded' : '');
+      if (s.expandOnRender) s.expandOnRender = false;
       const metaTok = estimateTokens(`${s.name}: ${s.description}`);
       const bodyTok = estimateTokens(s.body);
       li.innerHTML = `

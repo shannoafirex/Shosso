@@ -49,13 +49,15 @@ window.Predictor = {
     const wrap = document.getElementById('pred-output');
     if (!wrap) return;
     const key = (prefix || '').toLowerCase().trim();
-    const dist = this.TABLE[key];
+    let dist = this.TABLE[key];
+    let usedKey = key;
+    if (!dist) dist = this._fuzzyMatch(key, wrap);
     if (!dist) {
       wrap.innerHTML = `<div class="text-[11px] text-muted italic">Prueba con: "menos es", "el modelo", "context", "progressive", "cuando una skill falla", "tienes".</div>`;
       return;
     }
     const max = Math.max(...dist.map(d => d[1]));
-    wrap.innerHTML = dist.map(([tok, p]) => `
+    const bars = dist.map(([tok, p]) => `
       <div class="flex items-center gap-2 text-xs">
         <code class="font-mono w-32 truncate">${escapeHtml(tok)}</code>
         <div class="flex-1 h-2 bg-panel2 rounded overflow-hidden">
@@ -64,5 +66,26 @@ window.Predictor = {
         <span class="font-mono text-muted w-12 text-right">${(p*100).toFixed(0)}%</span>
       </div>
     `).join('');
+    const hint = key && key !== usedKey ? `<div class="text-[10px] text-muted italic mb-1">≈ usando match: "${escapeHtml(usedKey)}"</div>` : '';
+    wrap.innerHTML = hint + bars;
+  },
+
+  _fuzzyMatch(key, wrap) {
+    if (!key) return null;
+    const keys = Object.keys(this.TABLE);
+    let best = null, bestScore = 0;
+    for (const k of keys) {
+      const lastWord = key.split(/\s+/).pop();
+      if (k.endsWith(lastWord) || k.startsWith(lastWord) || k.includes(lastWord)) {
+        const score = lastWord.length / k.length;
+        if (score > bestScore) { best = k; bestScore = score; }
+      }
+    }
+    if (best) {
+      // Mutamos para que render mostre el hint
+      this._lastFuzzyKey = best;
+      return this.TABLE[best];
+    }
+    return null;
   }
 };
