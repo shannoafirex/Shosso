@@ -161,11 +161,12 @@ window.CommandPalette = {
     // Planes (abrir Plan tab)
     const plans = SafeStorage.safeGet('shosso.plans', []);
     for (const p of plans.slice(0, 20)) {
-      const sent = p.prs.filter(x => x.status === 'sent').length;
+      const prs = Array.isArray(p.prs) ? p.prs : [];
+      const sent = prs.filter(x => x.status === 'sent').length;
       items.push({
         category: 'Plan',
         title: p.goal.length > 60 ? p.goal.slice(0, 57) + '…' : p.goal,
-        subtitle: `${sent}/${p.prs.length} PRs enviados · ${p.tag || 'sin tag'}`,
+        subtitle: `${sent}/${prs.length} PRs enviados · ${p.tag || 'sin tag'}`,
         icon: '📋',
         action: () => {
           document.querySelector('[data-tab="plan"]')?.click();

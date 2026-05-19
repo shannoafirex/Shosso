@@ -137,7 +137,8 @@ window.Health = {
     // === Planes ===
     const plans = SafeStorage.safeGet('shosso.plans', []);
     const stalePlans = plans.filter(p => {
-      const sent = p.prs.filter(x => x.status === 'sent').length;
+      const prs = Array.isArray(p.prs) ? p.prs : [];
+      const sent = prs.filter(x => x.status === 'sent').length;
       return sent === 0 && (Date.now() - p.savedAt) > 14 * 86400000;
     });
     if (stalePlans.length > 0) {

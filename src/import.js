@@ -178,7 +178,12 @@ window.WorkspaceImport = {
       for (const p of d.plans) {
         if (!p.goal) continue;
         if (!current.some(x => x.goal === p.goal)) {
-          current.unshift({ ...p, id: 'imp-plan-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5) });
+          current.unshift({
+            ...p,
+            id: 'imp-plan-' + Date.now() + '-' + Math.random().toString(36).slice(2, 5),
+            // Normalize prs — sin esto render del Planner crashea en .filter
+            prs: Array.isArray(p.prs) ? p.prs : []
+          });
           report.plans++;
         }
       }

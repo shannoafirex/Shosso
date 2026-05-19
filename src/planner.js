@@ -210,8 +210,9 @@ window.Planner = {
       return;
     }
     wrap.innerHTML = filterChips + list.map(p => {
-      const sent = p.prs.filter(x => x.status === 'sent').length;
-      const total = p.prs.length;
+      const prs = Array.isArray(p.prs) ? p.prs : [];
+      const sent = prs.filter(x => x.status === 'sent').length;
+      const total = prs.length;
       const pct = total ? Math.round((sent / total) * 100) : 0;
       const barColor = pct === 100 ? 'bg-success' : pct >= 50 ? 'bg-accent' : 'bg-warn';
       const tagBadge = p.tag ? `<span class="text-[9px] uppercase tracking-wide bg-bg px-1.5 py-0.5 rounded text-muted">${escapeHtml(p.tag)}</span>` : '';

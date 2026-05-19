@@ -99,8 +99,9 @@ window.WorkspaceExport = {
       for (const tag of Object.keys(byTag).sort()) {
         lines.push(`\n### ${tag}`);
         for (const p of byTag[tag]) {
-          const sent = p.prs.filter(x => x.status === 'sent').length;
-          lines.push(`- **${p.goal}** — ${sent}/${p.prs.length} PRs enviados`);
+          const prs = Array.isArray(p.prs) ? p.prs : [];
+          const sent = prs.filter(x => x.status === 'sent').length;
+          lines.push(`- **${p.goal}** — ${sent}/${prs.length} PRs enviados`);
         }
       }
       lines.push('');
