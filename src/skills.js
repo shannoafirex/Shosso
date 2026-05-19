@@ -24,6 +24,22 @@ window.SkillsStore = {
     this.skills = this.skills.filter(s => s.id !== id);
     this.persist();
     this.render();
+    // Cascade cleanup: limpia referencias muertas en sub-agentes para
+    // evitar Workshop columns y dispatcher con skill ID inexistente.
+    if (window.AgentsStore) {
+      let touched = false;
+      for (const a of AgentsStore.agents) {
+        if (a.skills && a.skills.includes(id)) {
+          a.skills = a.skills.filter(sid => sid !== id);
+          touched = true;
+        }
+      }
+      if (touched) {
+        AgentsStore.persist();
+        AgentsStore.render();
+        if (window.Workshop) Workshop.render();
+      }
+    }
     Context.refresh();
   },
 

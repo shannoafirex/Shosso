@@ -94,6 +94,8 @@ window.CommandPalette = {
       { name: '/metric', desc: 'Track métrica SaaS (MRR, churn, NPS)' },
       { name: '/incident', desc: 'Registra incidente de producción/cliente' },
       { name: '/newthread', desc: 'Empieza thread limpio (mejor que /compact)' },
+      { name: '/compact', desc: 'Alias de /newthread' },
+      { name: '/opensource', desc: 'Clona código de un paquete al workspace' },
       { name: '/archetype', desc: 'Picker de templates pre-pobladas' },
       { name: '/demo', desc: 'Corre escenario scripted' }
     ];
