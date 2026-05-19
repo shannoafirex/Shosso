@@ -52,12 +52,15 @@
   wireTabs('.left-tab', '.left-panel', 'lefttab', 'leftpanel');
   wireTabs('.right-tab', '.right-panel', 'righttab', 'rightpanel');
 
-  document.getElementById('btn-open-folder').onclick = async () => {
+  const openFolderBtn = document.getElementById('btn-open-folder');
+  if (openFolderBtn) openFolderBtn.onclick = async () => {
     const dir = await window.shosso.app.pickFolder();
     if (dir) Projects.setRoot(dir);
   };
-  document.getElementById('skill-new').onclick = () => SkillsStore.add();
-  document.getElementById('skill-filter').addEventListener('input', e => {
+  const skillNewBtn = document.getElementById('skill-new');
+  if (skillNewBtn) skillNewBtn.onclick = () => SkillsStore.add();
+  const skillFilter = document.getElementById('skill-filter');
+  if (skillFilter) skillFilter.addEventListener('input', e => {
     SkillsStore.filter = e.target.value;
     SkillsStore.render();
   });
@@ -70,14 +73,14 @@
     if (action === 'git-status') GitPanel.refresh();
     if (action === 'git-commit') {
       document.querySelector('[data-leftTab="git"]')?.click();
-      document.getElementById('git-msg').focus();
+      document.getElementById('git-msg')?.focus();
     }
     if (action === 'toggle-terminal') {
       document.querySelector('.bottom-tab[data-tab="terminal"]')?.click();
     }
     if (action === 'toggle-chat') {
       document.querySelector('.bottom-tab[data-tab="chat"]')?.click();
-      document.getElementById('chat-input').focus();
+      document.getElementById('chat-input')?.focus();
     }
   });
 
@@ -85,7 +88,7 @@
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape') return;
     const modal = document.getElementById('settings-modal');
-    if (!modal.classList.contains('hidden')) Settings.close();
+    if (modal && !modal.classList.contains('hidden')) Settings.close();
   });
 
   // Initial render. Projects.init() only loads lastFolder from settings; it
