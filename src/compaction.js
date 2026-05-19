@@ -7,6 +7,10 @@ window.Compaction = {
 
   async run() {
     if (this.running) return;
+    if (window.Agent && Agent.currentRunId) {
+      alert('Hay un turno en curso. Espera a que termine o pulsa Detener.');
+      return;
+    }
     if (Context.conversation.length < 4) {
       alert('Conversación corta — no hay nada que compactar.');
       return;

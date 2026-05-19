@@ -50,13 +50,20 @@ window.SkillsStore = {
     const name = prompt('Nombre de la skill (slug, p.ej. "weekly-report"):');
     if (!name) return;
     const safe = name.replace(/[^a-zA-Z0-9_.-]/g, '-').toLowerCase();
+    if (!safe) return alert('Nombre inválido (sólo letras, números, "._-").');
+    const path = Projects.root + '/.shosso/skills/' + safe + '.md';
+    const exists = await window.shosso.fs.stat(path);
+    if (!exists.error) {
+      if (!confirm(`Ya existe la skill "${safe}". ¿Abrirla en el editor?`)) return;
+      if (window.Editor) Editor.openPath(path);
+      return;
+    }
     const description = prompt('Descripción corta (qué hace):') || '';
     const body = '# ' + name + '\n\nEscribe aquí los pasos / el prompt que reutilizas.\n';
-    const path = Projects.root + '/.shosso/skills/' + safe + '.md';
     const content = `---\nname: ${name}\ndescription: ${description}\n---\n\n${body}`;
-    await window.shosso.fs.writeFile(path, content);
+    const w = await window.shosso.fs.writeFile(path, content);
+    if (w.error) return alert('Error creando skill: ' + w.error);
     await this.reload();
-    // Open it in the editor
     if (window.Editor) Editor.openPath(path);
   },
 
@@ -96,8 +103,13 @@ window.SkillsStore = {
 
   // Used by Agent: scan the user's message for skill name mentions and
   // return any that match. Body gets injected into the system prompt.
+  // Word-boundary match to avoid "log" matching "logger" or "dialog".
   matchByMention(text) {
     const t = text.toLowerCase();
-    return this.skills.filter(s => t.includes(s.name.toLowerCase()));
+    return this.skills.filter(s => {
+      const name = s.name.toLowerCase();
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return new RegExp('(^|[^a-z0-9_])' + escaped + '($|[^a-z0-9_])', 'i').test(t);
+    });
   }
 };

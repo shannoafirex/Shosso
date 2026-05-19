@@ -7,9 +7,26 @@ window.Settings = {
 
     document.getElementById('btn-settings').onclick = () => this.open();
     document.getElementById('cfg-provider').addEventListener('change', e => {
-      document.getElementById('cfg-anthropic-block').classList.toggle('hidden', e.target.value !== 'anthropic');
-      document.getElementById('cfg-openai-block').classList.toggle('hidden', e.target.value !== 'openai');
-      this._save({ provider: e.target.value });
+      const newVal = e.target.value;
+      const applyToggle = (val) => {
+        document.getElementById('cfg-anthropic-block').classList.toggle('hidden', val !== 'anthropic');
+        document.getElementById('cfg-openai-block').classList.toggle('hidden', val !== 'openai');
+      };
+      applyToggle(newVal);
+      // If there's history with tool_use blocks, the IDs are provider-
+      // specific (toolu_xxx vs call_xxx) and don't translate cleanly.
+      const hasToolHistory = (Context.conversation || []).some(m =>
+        Array.isArray(m.content) && m.content.some(b => b.type === 'tool_use' || b.type === 'tool_result'));
+      if (hasToolHistory) {
+        if (confirm('Cambiar de proveedor con tool calls en el historial requiere reset de la conversación (los IDs no son compatibles). ¿Continuar?')) {
+          Context.reset();
+        } else {
+          e.target.value = window._settings.provider;
+          applyToggle(window._settings.provider);
+          return;
+        }
+      }
+      this._save({ provider: newVal });
       this._renderProviderPill();
     });
     document.getElementById('cfg-anthropic-model').addEventListener('change', e =>
@@ -65,7 +82,11 @@ window.Settings = {
     if (!v) return alert('Pega la API key primero.');
     const avail = await window.shosso.secrets.available();
     if (!avail) return alert('safeStorage no está disponible en este SO. Pon la key en variable de entorno: ' + (which === 'anthropic' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY'));
-    await window.shosso.secrets.set(which, v);
+    try {
+      await window.shosso.secrets.set(which, v);
+    } catch (err) {
+      return alert('Error guardando la key: ' + (err.message || err));
+    }
     document.getElementById(inputId).value = '';
     await this._refreshKeyStatus();
   },

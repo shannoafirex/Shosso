@@ -178,14 +178,20 @@ window.Agent = {
 
       Context.setUsage(res.usage);
 
+      // Defensive: SDK may return res.content as null/undefined on empty
+      // responses. Normalize to array before any filter/map.
+      const content = Array.isArray(res.content) ? res.content : [];
+
       // Persist assistant message into running conversation
-      Context.push({ role: 'assistant', content: res.content });
+      Context.push({ role: 'assistant', content });
 
       // Render tool calls into chat for visibility
-      const toolUses = res.content.filter(b => b.type === 'tool_use');
+      const toolUses = content.filter(b => b.type === 'tool_use');
       if (toolUses.length === 0) {
-        const finalText = res.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
-        if (finalText && finalText !== this._streamText) {
+        const finalText = content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+        if (!finalText && !this._streamText) {
+          assistantEl.innerHTML = `<div class="text-[10px] text-muted">${provider} · ${model}</div><span class="text-muted italic">(respuesta vacía)</span>`;
+        } else if (finalText && finalText !== this._streamText) {
           assistantEl.innerHTML = `<div class="text-[10px] text-muted">${provider} · ${model}</div>${this._renderMarkdown(finalText)}`;
         }
         this._streamingEl = null;

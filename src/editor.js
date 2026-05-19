@@ -178,7 +178,15 @@ window.Editor = {
     if (!Projects.root) return alert('Abre una carpeta primero.');
     const rel = prompt('Ruta del nuevo fichero (relativa a la carpeta):', 'untitled.txt');
     if (!rel) return;
-    const p = Projects.root + '/' + rel;
+    // Sanitize: strip leading slash, reject path traversal and absolute paths.
+    const clean = rel.replace(/\\/g, '/').replace(/^\/+/, '');
+    if (clean.split('/').some(seg => seg === '..' || seg === '') ||
+        /^[a-z]:/i.test(clean)) {
+      return alert('Ruta inválida (no se permite "..", paths absolutos ni segmentos vacíos).');
+    }
+    const p = Projects.root + '/' + clean;
+    const exists = await window.shosso.fs.stat(p);
+    if (!exists.error) return alert('Ya existe un fichero en esa ruta.');
     const r = await window.shosso.fs.writeFile(p, '');
     if (r.error) return alert(r.error);
     await this._renderFileTree();
