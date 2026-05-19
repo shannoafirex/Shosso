@@ -52,6 +52,7 @@
           <div id="ctx-bar" class="h-full bg-gradient-to-r from-accent to-accent2 transition-all" style="width:0%"></div>
         </div>
       </div>
+      <button id="btn-demo" class="text-xs px-2 py-1 rounded bg-accent2/20 text-accent2 hover:bg-accent2/30" title="Modo demo (scripted, mira sin teclear)">Demo</button>
       <button id="btn-tutorial" class="text-xs px-2 py-1 rounded bg-accent/20 text-accent hover:bg-accent/30" title="Onboarding rundown">Tour</button>
       <button id="btn-reset" class="text-xs px-2 py-1 rounded bg-panel2 hover:bg-border" title="Resetea la sesión">Reset</button>
     </div>
@@ -263,16 +264,22 @@
           </div>
         </div>
 
-        <!-- Philosophy + Harnesses panel -->
+        <!-- Philosophy + Harnesses + Knowledge work panel -->
         <div data-panel="philosophy" class="side-panel hidden p-3 space-y-3">
-          <h2 class="font-semibold text-sm">Filosofía</h2>
-          <p class="text-xs text-muted leading-snug">La cultura del IDE. Lo que no es feature pero sí actitud.</p>
-          <div id="philosophy-list" class="space-y-2"></div>
+          <h2 class="font-semibold text-sm">Knowledge work</h2>
+          <p class="text-xs text-muted leading-snug">Más bullish aquí que en agentic coding. Acciones reales con ROI medible.</p>
+          <div id="kw-list" class="space-y-2"></div>
 
           <div class="pt-3 border-t border-border">
             <h2 class="font-semibold text-sm mb-2">Comparativa de harnesses</h2>
             <p class="text-xs text-muted leading-snug mb-2">Los modelos son los mismos. La diferencia es cuánto control te dan sobre el contexto.</p>
             <div id="harnesses-list" class="space-y-2"></div>
+          </div>
+
+          <div class="pt-3 border-t border-border">
+            <h2 class="font-semibold text-sm mb-2">Filosofía</h2>
+            <p class="text-xs text-muted leading-snug mb-2">La cultura del IDE. Lo que no es feature pero sí actitud.</p>
+            <div id="philosophy-list" class="space-y-2"></div>
           </div>
         </div>
       </div>
@@ -372,6 +379,9 @@
   <script src="src/review-loop.js"></script>
   <script src="src/opensource.js"></script>
   <script src="src/new-thread.js"></script>
+  <script src="src/dispatcher.js"></script>
+  <script src="src/knowledge-work.js"></script>
+  <script src="src/demo.js"></script>
   <script src="src/mock-agent.js"></script>
   <script src="src/skill-builder.js"></script>
   <script src="src/tutorial.js"></script>

@@ -235,6 +235,7 @@ window.MockAgent = {
         `<code>/opensource &lt;repo&gt;</code> — clona código de un paquete<br>` +
         `<code>/newthread</code> o <code>/compact</code> — empieza thread limpio<br>` +
         `<code>/dispatch &lt;tarea&gt;</code> — manda en paralelo a todos los sub-agentes<br>` +
+        `<code>/demo</code> — corre un escenario scripted (mira sin teclear)<br>` +
         `<code>/help</code> — esta lista<br><br>` +
         `<b>Easter eggs:</b> "rundown", "food at home", "am I cooked", "1.8 billion", "vibe vs agentic", "knowledge work", "permanent underclass", "2 semanas".`);
       return true;
@@ -267,6 +268,18 @@ window.MockAgent = {
     }
     if (cmd === 'compact' || cmd === 'newthread') {
       NewThread.start();
+      return true;
+    }
+    if (cmd === 'dispatch') {
+      if (!args) {
+        this.log('agent', `Uso: <code>/dispatch &lt;tarea&gt;</code>. Manda la tarea a todos los sub-agentes en paralelo.`, 'agente');
+        return true;
+      }
+      Dispatcher.dispatch(args);
+      return true;
+    }
+    if (cmd === 'demo') {
+      Demo.run();
       return true;
     }
     return false;

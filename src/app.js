@@ -49,6 +49,7 @@ function init() {
   Security.init();
   Planner.init();
   NewThread.init();
+  KnowledgeWork.init();
   Tutorial.init();
   ImportSkill.init();
   setupTerminal();
@@ -263,6 +264,8 @@ function setupListeners() {
     });
     Productivity.refresh();
   });
+
+  document.getElementById('btn-demo').addEventListener('click', () => Demo.run());
 
   document.getElementById('btn-reset').addEventListener('click', async () => {
     let ok = false;
