@@ -53,8 +53,9 @@ window.ChatPersistence = {
     return true;
   },
 
-  // Re-asocia onclick handlers en mensajes restaurados (chips, desafiar, …).
-  // Sin esto, los botones del chat persistido quedan visuales pero muertos.
+  // Re-asocia onclick handlers en mensajes restaurados (chips, desafiar,
+  // compaction summary, ...). Sin esto, los botones del chat persistido
+  // quedan visuales pero muertos.
   _rehydrate(div, m) {
     // Example chips
     div.querySelectorAll('.example-chip[data-text]').forEach(b => {
@@ -62,6 +63,8 @@ window.ChatPersistence = {
     });
     // Banner sycophancy (re-detectar y re-asociar)
     if (m.role === 'agent' && window.Sycophancy) Sycophancy.wrap(div, m.html);
+    // Botones inline de compaction summary
+    if (window.Compaction) Compaction._wireInlineButton(div);
     // clear-history button del banner anterior (si quedó en historial — no debería)
     const ch = div.querySelector('#clear-history');
     if (ch) ch.remove();

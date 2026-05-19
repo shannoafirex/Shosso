@@ -60,6 +60,19 @@ window.WorkspaceImport = {
         errEl.classList.remove('hidden');
         return;
       }
+      // Version check
+      const version = parsed.version || 0;
+      const SHOSSO_IMPORT_VERSION = 1;
+      if (version === 0 && !Array.isArray(parsed.skills) && !Array.isArray(parsed.agents)) {
+        errEl.textContent = 'JSON sin metadata Shosso. ¿Es realmente un export?';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (version > SHOSSO_IMPORT_VERSION) {
+        errEl.innerHTML = `⚠ Snapshot version ${version} > soportada (${SHOSSO_IMPORT_VERSION}). El import seguirá pero algunos campos pueden ignorarse silenciosamente. Actualiza tu Shosso.`;
+        errEl.className = 'text-xs text-warn';
+        errEl.classList.remove('hidden');
+      }
       preview.innerHTML = this._renderPreview(parsed);
       preview.classList.remove('hidden');
       applyBtn.disabled = false;

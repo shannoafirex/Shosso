@@ -9,6 +9,8 @@ window.CommandPalette = {
   _modal: null,
   _selectedIndex: 0,
   _results: [],
+  _itemsCache: null,
+  _itemsCacheStamp: 0,
 
   init() {
     document.addEventListener('keydown', (e) => {
@@ -21,8 +23,12 @@ window.CommandPalette = {
     });
   },
 
+  // Invalidar cache cuando se abre — el estado pudo haber cambiado.
+  _invalidateCache() { this._itemsCache = null; },
+
   open() {
     if (this._modal) { this._modal.querySelector('input')?.focus(); return; }
+    this._invalidateCache(); // fresh state al abrir
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-24 px-4';
     modal.innerHTML = `
@@ -256,7 +262,11 @@ window.CommandPalette = {
   },
 
   _filter(query) {
-    const all = this._gatherItems();
+    // Cache items mientras el palette esté abierto: state no cambia entre
+    // keystrokes a menos que el usuario ejecute una acción (que cierra el
+    // modal). Sin cache, 100+ items × 30 keystrokes = mucho rebuild.
+    if (!this._itemsCache) this._itemsCache = this._gatherItems();
+    const all = this._itemsCache;
     if (!query) return all.slice(0, 60);
     const scored = [];
     for (const item of all) {

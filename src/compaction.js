@@ -58,18 +58,33 @@ window.Compaction = {
     if (this.history.length > 20) this.history.pop();
     this._persistHistory();
     Context.log(`Compactación automática: conversación ${before}t → ${compressed}t (ahorro ${saved}t)`);
-    const detailId = 'cmp-' + Date.now();
-    MockAgent.log('system',
+    // Embed el summary directamente en el botón (data attribute) para que
+    // funcione tras restaurar el chat desde localStorage. El handler vive
+    // en Compaction._wireInlineButton, llamado al log y al rehidratar.
+    const summaryStr = encodeURIComponent(JSON.stringify(summary));
+    const msg = MockAgent.log('system',
       `🗜 <b>Compactación automática</b> aplicada.<br>` +
       `Conversación: ${before}t → ${compressed}t (ahorro ${saved}t).<br>` +
-      `<button data-action="show-compact" data-id="${detailId}" class="text-[10px] underline text-accent2 hover:text-accent">ver qué se compactó</button>`);
-    // Asocia el handler en el último mensaje
-    setTimeout(() => {
-      document.querySelectorAll(`[data-id="${detailId}"]`).forEach(b => {
-        b.onclick = () => this._showSummary(summary);
-      });
-    }, 50);
+      `<button data-action="show-compact" data-summary="${summaryStr}" class="text-[10px] underline text-accent2 hover:text-accent">ver qué se compactó</button>`);
+    this._wireInlineButton(msg);
     Context.refresh();
+  },
+
+  // Conecta los botones inline de compaction summary. Idempotente — puede
+  // llamarse para mensajes recién creados o restaurados desde historial.
+  _wireInlineButton(el) {
+    el.querySelectorAll('button[data-action="show-compact"][data-summary]').forEach(b => {
+      if (b._wired) return;
+      b._wired = true;
+      b.onclick = () => {
+        try {
+          const summary = JSON.parse(decodeURIComponent(b.dataset.summary));
+          this._showSummary(summary);
+        } catch (e) {
+          console.warn('Compaction summary parse error:', e);
+        }
+      };
+    });
   },
 
   _summarize(beforeTokens) {
