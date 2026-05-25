@@ -27,7 +27,7 @@ repo de control. En cada ejecución:
 1. Lista todos los repos que **posees** (omite forks, archivados y los de la
    lista de exclusión).
 2. En cada uno, crea o actualiza los archivos de RoboShosso si difieren.
-3. Si al repo le falta el secreto `ANTHROPIC_API_KEY`, lo añade (cifrado).
+3. Si al repo le falta el secreto `CLAUDE_CODE_OAUTH_TOKEN`, lo añade (cifrado).
 
 Como recorre toda la cuenta en cada pasada, **los repos nuevos se incorporan
 solos** en la siguiente ejecución (hasta 30 min). No es instantáneo, pero no
@@ -55,17 +55,26 @@ cron y el propagador se quedan únicamente aquí.
 1. **Instala la GitHub App de Claude** en tu cuenta, con acceso a *todos* los
    repos: `/install-github-app` en la CLI de Claude Code, o desde
    [github.com/apps/claude](https://github.com/apps/claude).
-2. En **este repo de control**, *Settings → Secrets and variables → Actions*,
+2. **Genera un token de tu suscripción** (no se usa API key que cobra por
+   tokens). En la CLI de Claude Code, con tu sesión de Pro/Max iniciada:
+
+   ```bash
+   claude setup-token
+   ```
+
+   Copia el token que imprime (dura ~1 año). Usa tu plan de suscripción, no
+   créditos de la API.
+3. En **este repo de control**, *Settings → Secrets and variables → Actions*,
    añade dos secretos:
-   - `ANTHROPIC_API_KEY` — tu clave de Anthropic (`sk-ant-…`). Se replicará a
-     cada repo.
+   - `CLAUDE_CODE_OAUTH_TOKEN` — el token del paso anterior. Se replicará a cada
+     repo y autentica a Claude con tu suscripción.
    - `ROBOSHOSSO_TOKEN` — un **Personal Access Token** con permiso de escritura
      sobre tus repos. Con un PAT clásico: scopes `repo` + `workflow`. Con uno
      *fine-grained*: acceso a todos tus repos con permisos **Contents: write**,
      **Workflows: write** y **Secrets: write**. Ponle caducidad.
-3. (Opcional) Variable `ROBOSHOSSO_SKIP` (*Settings → Variables*) con nombres de
+4. (Opcional) Variable `ROBOSHOSSO_SKIP` (*Settings → Variables*) con nombres de
    repos a excluir, separados por comas.
-4. Lanza la propagación a mano la primera vez: pestaña **Actions →
+5. Lanza la propagación a mano la primera vez: pestaña **Actions →
    "RoboShosso · Propagar" → Run workflow**. Marca *dry run* para ver qué haría
    sin escribir nada.
 
@@ -86,16 +95,19 @@ agente, comenta por ejemplo:
 
 ## Notas honestas (léelas)
 
-- **Costo.** Cada PR en cada repo dispara llamadas a la API de Anthropic
-  (tokens) y consume minutos de Actions. Con muchos repos/PRs esto se acumula:
-  vigila tus límites de gasto en Anthropic y empieza con un subconjunto vía
-  `ROBOSHOSSO_SKIP`.
+- **Costo / límites.** Se autentica con tu **suscripción** (no API de pago por
+  token) vía `claude setup-token`. Ese token consume de la misma cuota que tus
+  sesiones interactivas de Claude: con muchos repos/PRs puedes toparte con los
+  límites de tu plan y competir con tu uso normal. Empieza con un subconjunto vía
+  `ROBOSHOSSO_SKIP`. (Las ejecuciones también gastan minutos de GitHub Actions.)
 - **Seguridad — superficie amplia.** El `ROBOSHOSSO_TOKEN` puede escribir en
-  todos tus repos, y tu `ANTHROPIC_API_KEY` queda replicada como secreto en cada
-  uno. El modo agente ejecuta un LLM con permiso de push sobre PRs que puede
+  todos tus repos, y tu `CLAUDE_CODE_OAUTH_TOKEN` queda replicado como secreto en
+  cada uno. El modo agente ejecuta un LLM con permiso de push sobre PRs que puede
   abrir cualquiera, lo que abre la puerta a inyección de prompts. Mitiga:
   protege la rama principal con *required reviews*, usa un PAT *fine-grained* con
   caducidad, y limita en qué repos corre.
+- **Caducidad del token:** `claude setup-token` dura ~1 año; tendrás que
+  regenerarlo y re-propagar cuando expire.
 - **No es instantáneo:** los repos nuevos entran en la siguiente pasada del
   cron (≤ 30 min).
 - RoboShosso acelera, pero **no sustituye la revisión humana final**.

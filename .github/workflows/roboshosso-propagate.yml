@@ -38,6 +38,6 @@ jobs:
         run: node roboshosso/propagate/propagate.mjs
         env:
           ROBOSHOSSO_TOKEN: ${{ secrets.ROBOSHOSSO_TOKEN }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           ROBOSHOSSO_SKIP: ${{ vars.ROBOSHOSSO_SKIP }}
           DRY_RUN: ${{ inputs.dry_run }}

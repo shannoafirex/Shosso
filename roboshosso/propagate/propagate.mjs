@@ -1,14 +1,14 @@
 // RoboShosso · Propagador.
 // Recorre todos los repos de la cuenta autenticada e instala (o actualiza)
-// los archivos de RoboShosso y el secreto ANTHROPIC_API_KEY. Idempotente:
+// los archivos de RoboShosso y el secreto CLAUDE_CODE_OAUTH_TOKEN. Idempotente:
 // solo escribe cuando el contenido difiere o el secreto no existe.
 //
 // Se ejecuta desde la RAÍZ del repo de control (lee los archivos fuente de
 // ahí). Variables de entorno:
-//   ROBOSHOSSO_TOKEN   PAT con acceso a contents + workflows + secrets de tus repos (obligatorio)
-//   ANTHROPIC_API_KEY  clave que se replicará como secreto en cada repo (opcional)
-//   ROBOSHOSSO_SKIP    lista separada por comas de repos a omitir (opcional)
-//   DRY_RUN            'true' para simular sin escribir (opcional)
+//   ROBOSHOSSO_TOKEN         PAT con acceso a contents + workflows + secrets de tus repos (obligatorio)
+//   CLAUDE_CODE_OAUTH_TOKEN  token de tu suscripción (claude setup-token); se replica como secreto (opcional)
+//   ROBOSHOSSO_SKIP          lista separada por comas de repos a omitir (opcional)
+//   DRY_RUN                  'true' para simular sin escribir (opcional)
 
 import { Octokit } from '@octokit/rest';
 import { readFileSync } from 'node:fs';
@@ -23,7 +23,7 @@ if (!token) {
   console.error('Falta ROBOSHOSSO_TOKEN. Aborto.');
   process.exit(1);
 }
-const anthropicKey = process.env.ANTHROPIC_API_KEY || '';
+const oauthToken = process.env.CLAUDE_CODE_OAUTH_TOKEN || '';
 const DRY_RUN = process.env.DRY_RUN === 'true';
 const skip = new Set(
   (process.env.ROBOSHOSSO_SKIP || '').split(',').map((s) => s.trim()).filter(Boolean)
@@ -64,10 +64,12 @@ async function ensureFile(owner, repo, path, content) {
   return sha ? 'actualizado' : 'creado';
 }
 
+const SECRET_NAME = 'CLAUDE_CODE_OAUTH_TOKEN';
+
 async function ensureSecret(owner, repo) {
-  if (!anthropicKey) return 'sin-clave';
+  if (!oauthToken) return 'sin-token';
   try {
-    await octokit.actions.getRepoSecret({ owner, repo, secret_name: 'ANTHROPIC_API_KEY' });
+    await octokit.actions.getRepoSecret({ owner, repo, secret_name: SECRET_NAME });
     return 'ya-existe';
   } catch (e) {
     if (e.status !== 404) throw e;
@@ -76,13 +78,13 @@ async function ensureSecret(owner, repo) {
   const { data: pk } = await octokit.actions.getRepoPublicKey({ owner, repo });
   await sodium.ready;
   const enc = sodium.crypto_box_seal(
-    sodium.from_string(anthropicKey),
+    sodium.from_string(oauthToken),
     sodium.from_base64(pk.key, sodium.base64_variants.ORIGINAL)
   );
   await octokit.actions.createOrUpdateRepoSecret({
     owner,
     repo,
-    secret_name: 'ANTHROPIC_API_KEY',
+    secret_name: SECRET_NAME,
     encrypted_value: sodium.to_base64(enc, sodium.base64_variants.ORIGINAL),
     key_id: pk.key_id,
   });
@@ -113,7 +115,7 @@ for (const r of repos) {
     if (results.some((x) => CHANGED.test(x)) || CHANGED.test(secretResult)) touched++;
     console.log(`• ${r.full_name}`);
     for (const line of results) console.log(`   ${line}`);
-    console.log(`   secreto ANTHROPIC_API_KEY: ${secretResult}`);
+    console.log(`   secreto ${SECRET_NAME}: ${secretResult}`);
   } catch (e) {
     console.error(`✗ ${r.full_name}: ${e.status || ''} ${e.message}`);
   }
