@@ -76,3 +76,34 @@ jobs:
           plugins: "code-review@claude-code-plugins"
           prompt: "/code-review:code-review"
           claude_args: "--model claude-opus-4-7"
+
+  autofix:
+    name: Verificar y corregir push directo (Claude)
+    # Solo en pushes directos que NO sean ya una corrección automática.
+    if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Se hizo un push DIRECTO a este repositorio (sin pasar por un PR), así que
+            nadie lo revisó. Verifica y corrige lo necesario:
+            1. Mira qué cambió en el último commit: `git show --stat HEAD` y el diff.
+            2. Ejecuta los chequeos del proyecto: `bash roboshosso/simulate.sh roboshosso-sim.md`
+               (si no hay stack reconocido, corre el lint/test/build que aplique).
+            3. Si hay fallos, errores o bugs introducidos por ese commit, corrígelos
+               en el código. No hagas refactors ni cambios fuera del alcance del problema.
+            4. Si hiciste cambios, súbelos a esta misma rama con:
+               `git add -A && git commit -m "fix(roboshosso): corrección automática [skip ci]" && git push origin HEAD`
+               El `[skip ci]` es OBLIGATORIO para no entrar en bucle.
+            5. Si todo estaba bien, NO hagas ningún commit; solo deja una nota breve.
+          claude_args: "--model claude-opus-4-7 --max-turns 20 --allowedTools Bash,Edit,Read,Write,Grep,Glob"
