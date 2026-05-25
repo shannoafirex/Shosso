@@ -105,7 +105,21 @@ async function ensureSecret(owner, repo) {
 
 async function ensureGate(owner, repo, branch) {
   if (!GATE) return 'desactivado';
-  if (DRY_RUN) return 'protegería';
+  // ¿Ya hay protección en la rama?
+  let existing = null;
+  try {
+    const { data } = await octokit.repos.getBranchProtection({ owner, repo, branch });
+    existing = data;
+  } catch (e) {
+    // 404 = no hay protección; otro error (403/plan, permiso) = no se puede gestionar.
+    if (e.status !== 404) return `sin portón (${e.status || '?'}: ${(e.message || '').split('\n')[0]})`;
+  }
+  // Si hay protección y NO es de RoboShosso (no exige nuestro check), la respetamos.
+  if (existing) {
+    const ctx = existing.required_status_checks?.contexts || [];
+    if (!ctx.includes('Simular y probar el PR')) return 'protección propia respetada';
+  }
+  if (DRY_RUN) return existing ? 'refrescaría' : 'protegería';
   try {
     await octokit.repos.updateBranchProtection({
       owner,
@@ -119,7 +133,7 @@ async function ensureGate(owner, repo, branch) {
       required_pull_request_reviews: { required_approving_review_count: 0 },
       restrictions: null,
     });
-    return 'portón activo';
+    return existing ? 'portón refrescado' : 'portón activo';
   } catch (e) {
     // Repos privados en plan gratuito no permiten branch protection, etc.
     const msg = (e.message || '').split('\n')[0];
