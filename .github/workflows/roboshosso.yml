@@ -6,11 +6,18 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
   push:
+    branches: ['**'] # ramas, no tags
 
 permissions:
   contents: write
   pull-requests: write
   id-token: write
+
+# Evita runs encimados y carreras entre agentes en la misma rama/PR. Se separan
+# por evento para no cancelar checks obligatorios del PR con un run de push.
+concurrency:
+  group: roboshosso-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   simulate:
@@ -61,8 +68,8 @@ jobs:
 
   review:
     name: Revisión de código con Claude
-    # La revisión con comentarios línea a línea necesita un PR.
-    if: github.event_name == 'pull_request'
+    # Solo en PRs del mismo repo: los forks no exponen el secreto del token.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -91,7 +98,23 @@ jobs:
         with:
           node-version: '22'
 
-      - uses: anthropics/claude-code-action@v1
+      # Si la rama ya tiene un PR abierto, lo revisa el job `iterate`: evitamos
+      # que dos agentes empujen a la misma rama a la vez.
+      - name: ¿La rama tiene un PR abierto?
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          result-encoding: string
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const { data } = await github.rest.pulls.list({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', head: `${context.repo.owner}:${branch}`,
+            });
+            return data.length > 0 ? 'yes' : 'no';
+
+      - if: steps.pr.outputs.result == 'no'
+        uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
@@ -110,7 +133,8 @@ jobs:
 
   iterate:
     name: RoboShosso · revisar y corregir hasta dejarlo limpio
-    if: github.event_name == 'pull_request'
+    # Solo PRs del mismo repo: no podemos empujar correcciones a un fork.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -122,14 +146,17 @@ jobs:
         with:
           node-version: '22'
 
-      # Tope de seguridad: cuenta cuántas rondas de autocorrección ya hubo en
-      # esta rama, para no iterar infinitamente si algo no converge.
+      # Tope de seguridad: cuenta las rondas de autocorrección SOLO en este PR
+      # (commits entre base y head), para no iterar infinitamente si no converge.
       - name: Contar rondas previas
         id: cap
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
         run: |
-          ROUNDS=$(git log --format=%s -n 50 | grep -c '\[roboshosso-loop\]' || true)
+          git fetch origin "$BASE" --quiet || true
+          ROUNDS=$(git log --format=%s "origin/$BASE..HEAD" 2>/dev/null | grep -c '\[roboshosso-loop\]' || true)
           echo "rounds=${ROUNDS:-0}" >> "$GITHUB_OUTPUT"
-          echo "Rondas de autocorrección previas: ${ROUNDS:-0}"
+          echo "Rondas de autocorrección en este PR: ${ROUNDS:-0}"
 
       - name: Revisar y corregir (Claude)
         if: fromJSON(steps.cap.outputs.rounds) < 10

@@ -4,7 +4,7 @@ name: RoboShosso · Propagar
 # (incluidos los nuevos) en cada ejecución programada.
 on:
   schedule:
-    - cron: '*/30 * * * *' # cada 30 minutos
+    - cron: '*/10 * * * *' # cada 10 minutos (repos nuevos se cubren rápido)
   workflow_dispatch:
     inputs:
       dry_run:
@@ -31,7 +31,7 @@ jobs:
           node-version: '22'
 
       - name: Instalar dependencias del propagador
-        run: npm install
+        run: npm ci
         working-directory: roboshosso/propagate
 
       - name: Propagar RoboShosso
