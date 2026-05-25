@@ -56,7 +56,7 @@ El código funciona. Los ingresos **no son automáticos**: dependen de que despl
 Nadie puede garantizarte $15/día — eso lo decide el mercado. Lo que tienes aquí es un producto vendible de verdad, sin humo.
 
 ## Roadmap sugerido (para subir ingresos)
-- QR personalizables (color, logo en el centro) → función premium muy pedida.
+- QR personalizables: **color ya implementado** (función Pro). Falta logo en el centro.
 - Analíticas por país/dispositivo (ya se guarda user-agent; falta geolocalización por IP).
 - Dominios personalizados por cliente.
 - Plan anual con descuento (mejora la retención).

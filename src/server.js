@@ -189,12 +189,26 @@ app.delete('/api/links/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// QR como PNG dataURL
+// QR como PNG dataURL. Color personalizado = función Pro.
+const HEX = /^#[0-9a-fA-F]{6}$/;
 app.get('/api/links/:id/qr', requireAuth, async (req, res) => {
   const link = db.prepare('SELECT * FROM links WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
   if (!link) return res.status(404).json({ error: 'No encontrado' });
-  const dataUrl = await QRCode.toDataURL(`${BASE_URL}/r/${link.code}`, { width: 512, margin: 2 });
-  res.json({ dataUrl, short_url: `${BASE_URL}/r/${link.code}` });
+
+  const plan = planOf(req.user);
+  let dark = '#000000';
+  let light = '#ffffff';
+  let customized = false;
+  if (HEX.test(req.query.dark || '')) { dark = req.query.dark; customized = true; }
+  if (HEX.test(req.query.light || '')) { light = req.query.light; customized = true; }
+  if (customized && !plan.dynamic) {
+    return res.status(402).json({ error: 'Personalizar el color del QR es una función Pro.', upgrade: true });
+  }
+
+  const dataUrl = await QRCode.toDataURL(`${BASE_URL}/r/${link.code}`, {
+    width: 512, margin: 2, color: { dark, light },
+  });
+  res.json({ dataUrl, short_url: `${BASE_URL}/r/${link.code}`, canCustomize: plan.dynamic });
 });
 
 // Analíticas (solo Pro)

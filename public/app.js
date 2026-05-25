@@ -1,5 +1,6 @@
 const $ = (sel) => document.querySelector(sel);
 let me = null;
+let currentQrId = null;
 
 async function api(path, opts = {}) {
   const res = await fetch(path, {
@@ -115,10 +116,13 @@ $('#links').addEventListener('click', async (e) => {
       btn.textContent = '¡Copiado!';
       setTimeout(() => (btn.textContent = 'Copiar enlace'), 1200);
     } else if (act === 'qr') {
-      const { dataUrl, short_url } = await api(`/api/links/${id}/qr`);
+      currentQrId = id;
+      const { dataUrl, short_url, canCustomize } = await api(`/api/links/${id}/qr`);
       $('#qr-img').src = dataUrl;
       $('#qr-download').href = dataUrl;
       $('#qr-url').textContent = short_url;
+      $('#qr-colors').classList.toggle('hidden', !canCustomize);
+      $('#qr-pro-hint').classList.toggle('hidden', canCustomize);
       $('#qr-modal').classList.remove('hidden');
     } else if (act === 'edit') {
       const target = prompt('Nuevo destino (URL):');
@@ -136,5 +140,20 @@ $('#links').addEventListener('click', async (e) => {
 });
 
 $('#qr-close').addEventListener('click', () => $('#qr-modal').classList.add('hidden'));
+
+async function regenQr() {
+  if (!currentQrId) return;
+  const dark = encodeURIComponent($('#qr-dark').value);
+  const light = encodeURIComponent($('#qr-light').value);
+  try {
+    const { dataUrl } = await api(`/api/links/${currentQrId}/qr?dark=${dark}&light=${light}`);
+    $('#qr-img').src = dataUrl;
+    $('#qr-download').href = dataUrl;
+  } catch (err) {
+    alert(err.message);
+  }
+}
+$('#qr-dark').addEventListener('change', regenQr);
+$('#qr-light').addEventListener('change', regenQr);
 
 refresh().catch(() => show('auth'));
