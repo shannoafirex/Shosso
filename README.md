@@ -1,62 +1,101 @@
 # RoboShosso
 
 Bot de GitHub para revisar, probar y arreglar Pull Requests automáticamente,
-impulsado por **Claude** (el mismo motor que usa [`robobun`](https://github.com/robobun),
-el bot del proyecto Bun). Vive dentro del repositorio como GitHub Actions.
+impulsado por **Claude** (el mismo enfoque que [`robobun`](https://github.com/robobun),
+el bot del proyecto Bun).
 
-## Qué hace
+Este repositorio es el **repo de control**: además de correr RoboShosso sobre sí
+mismo, lo **propaga a todos los repos de tu cuenta** —incluidos los nuevos— sin
+necesidad de un servidor. Todo vive dentro de tu GitHub.
 
-RoboShosso tiene **tres modos**:
+## Qué hace en cada repo
 
 | Modo | Cuándo se activa | Qué hace |
 | --- | --- | --- |
 | **Revisión** | Al abrir/actualizar un PR | Claude revisa el diff y deja comentarios con hallazgos y sugerencias. |
 | **Simulación** | Al abrir/actualizar un PR | Detecta el stack, instala dependencias y corre lint + tests + build. Publica una tabla de resultados en el PR y marca el check en rojo si algo falla. |
-| **Agente** | Al comentar `/roboshosso <instrucción>` en un issue o PR | Claude entra al repo, hace los cambios pedidos y los empuja a la rama del PR. |
+| **Agente** | Al comentar `/roboshosso <instrucción>` en un issue o PR | Claude entra al repo, hace los cambios y los empuja a la rama del PR. |
 
 La simulación reconoce automáticamente proyectos **Node.js, Python, Go, Rust**
 y, como respaldo, un `Makefile` con target `test`. Ver `roboshosso/simulate.sh`.
+
+## Cómo cubre "todos los repos"
+
+Un workflow programado (`roboshosso-propagate.yml`) corre cada 30 min en este
+repo de control. En cada ejecución:
+
+1. Lista todos los repos que **posees** (omite forks, archivados y los de la
+   lista de exclusión).
+2. En cada uno, crea o actualiza los archivos de RoboShosso si difieren.
+3. Si al repo le falta el secreto `ANTHROPIC_API_KEY`, lo añade (cifrado).
+
+Como recorre toda la cuenta en cada pasada, **los repos nuevos se incorporan
+solos** en la siguiente ejecución (hasta 30 min). No es instantáneo, pero no
+requiere ningún servidor.
 
 ## Estructura
 
 ```
 .github/workflows/
-  roboshosso.yml         # Revisión + simulación en cada PR
-  roboshosso-agent.yml   # Modo agente disparado por comentario
+  roboshosso.yml            # Revisión + simulación en cada PR (se propaga)
+  roboshosso-agent.yml      # Modo agente por comentario (se propaga)
+  roboshosso-propagate.yml  # Cron de propagación (SOLO en el repo de control)
 roboshosso/
-  simulate.sh            # Detecta el stack, instala y corre los chequeos
+  simulate.sh               # Detecta el stack, instala y corre chequeos (se propaga)
+  propagate/
+    propagate.mjs           # Lógica de propagación
+    package.json
 ```
+
+Solo los tres archivos marcados "(se propaga)" se copian a los demás repos. El
+cron y el propagador se quedan únicamente aquí.
 
 ## Puesta en marcha (una sola vez)
 
-1. **Instala la GitHub App de Claude** en el repositorio: ejecuta
-   `/install-github-app` en la CLI de Claude Code, o instálala manualmente
-   desde [github.com/apps/claude](https://github.com/apps/claude).
-2. **Añade el secreto `ANTHROPIC_API_KEY`** en
-   *Settings → Secrets and variables → Actions* del repositorio
-   (la clave empieza por `sk-ant-`).
-3. Listo. Abre un PR y RoboShosso lo revisará y lo simulará solo. Para el modo
-   agente, comenta por ejemplo:
+1. **Instala la GitHub App de Claude** en tu cuenta, con acceso a *todos* los
+   repos: `/install-github-app` en la CLI de Claude Code, o desde
+   [github.com/apps/claude](https://github.com/apps/claude).
+2. En **este repo de control**, *Settings → Secrets and variables → Actions*,
+   añade dos secretos:
+   - `ANTHROPIC_API_KEY` — tu clave de Anthropic (`sk-ant-…`). Se replicará a
+     cada repo.
+   - `ROBOSHOSSO_TOKEN` — un **Personal Access Token** con permiso de escritura
+     sobre tus repos. Con un PAT clásico: scopes `repo` + `workflow`. Con uno
+     *fine-grained*: acceso a todos tus repos con permisos **Contents: write**,
+     **Workflows: write** y **Secrets: write**. Ponle caducidad.
+3. (Opcional) Variable `ROBOSHOSSO_SKIP` (*Settings → Variables*) con nombres de
+   repos a excluir, separados por comas.
+4. Lanza la propagación a mano la primera vez: pestaña **Actions →
+   "RoboShosso · Propagar" → Run workflow**. Marca *dry run* para ver qué haría
+   sin escribir nada.
 
-   ```
-   /roboshosso corrige el error de tipos en src/server.js y añade un test
-   ```
+A partir de ahí cada PR en cualquier repo se revisa y simula solo. Para el modo
+agente, comenta por ejemplo:
+
+```
+/roboshosso corrige el error de tipos en src/server.js y añade un test
+```
 
 ## Personalización
 
-- **Frase de activación del agente:** cambia `trigger_phrase: "/roboshosso"`
-  en `roboshosso-agent.yml`.
-- **Modelo:** ajusta `--model` en el campo `claude_args` de ambos workflows.
-- **Límite de pasos del agente:** `--max-turns` en `roboshosso-agent.yml`.
-- **Qué prueba la simulación:** edita `roboshosso/simulate.sh` para añadir
-  más comandos o stacks.
+- **Frecuencia de propagación:** el `cron` en `roboshosso-propagate.yml`.
+- **Frase del agente:** `trigger_phrase` en `roboshosso-agent.yml`.
+- **Modelo / límite de pasos:** `--model` y `--max-turns` en `claude_args`.
+- **Qué prueba la simulación:** `roboshosso/simulate.sh`.
+- **Repos excluidos:** variable `ROBOSHOSSO_SKIP`.
 
-## Notas honestas
+## Notas honestas (léelas)
 
-- **Cuesta dinero:** cada ejecución consume tokens de tu cuenta de Anthropic
-  (vía `ANTHROPIC_API_KEY`) y minutos de GitHub Actions. Revisa tus límites de
-  gasto antes de dejarlo suelto en un repo con mucho tráfico de PRs.
-- **El modo agente puede empujar código** a la rama del PR (`contents: write`).
-  Úsalo en repos donde confíes en quién puede comentar, o protege la rama
-  principal con required reviews para que nada se mezcle sin aprobación humana.
-- RoboShosso ayuda y acelera, pero **no sustituye la revisión humana final**.
+- **Costo.** Cada PR en cada repo dispara llamadas a la API de Anthropic
+  (tokens) y consume minutos de Actions. Con muchos repos/PRs esto se acumula:
+  vigila tus límites de gasto en Anthropic y empieza con un subconjunto vía
+  `ROBOSHOSSO_SKIP`.
+- **Seguridad — superficie amplia.** El `ROBOSHOSSO_TOKEN` puede escribir en
+  todos tus repos, y tu `ANTHROPIC_API_KEY` queda replicada como secreto en cada
+  uno. El modo agente ejecuta un LLM con permiso de push sobre PRs que puede
+  abrir cualquiera, lo que abre la puerta a inyección de prompts. Mitiga:
+  protege la rama principal con *required reviews*, usa un PAT *fine-grained* con
+  caducidad, y limita en qué repos corre.
+- **No es instantáneo:** los repos nuevos entran en la siguiente pasada del
+  cron (≤ 30 min).
+- RoboShosso acelera, pero **no sustituye la revisión humana final**.
