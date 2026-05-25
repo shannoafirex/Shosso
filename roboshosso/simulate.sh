@@ -93,6 +93,7 @@ else
 fi
 
 {
+  echo '<img src="https://robohash.org/roboshosso.png?set=set1&size=110x110" align="right" width="96" height="96" alt="RoboShosso" />'
   echo "## 🤖 RoboShosso · Simulación"
   echo ""
   echo "**Stack detectado:**"
