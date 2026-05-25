@@ -29,6 +29,11 @@ const skip = new Set(
   (process.env.ROBOSHOSSO_SKIP || '').split(',').map((s) => s.trim()).filter(Boolean)
 );
 
+// Portón obligatorio: protege la rama principal exigiendo PR + checks de
+// RoboShosso en verde. ROBOSHOSSO_GATE=off lo desactiva.
+const GATE = process.env.ROBOSHOSSO_GATE !== 'off';
+const REQUIRED_CHECKS = ['Simular y probar el PR', 'Revisión de código con Claude'];
+
 // Fuente de verdad: estos archivos del repo de control se copian a cada repo.
 const FILES = [
   '.github/workflows/roboshosso.yml',
@@ -53,14 +58,20 @@ async function ensureFile(owner, repo, path, content) {
     if (e.status !== 404) throw e;
   }
   if (DRY_RUN) return sha ? 'actualizaría' : 'crearía';
-  await octokit.repos.createOrUpdateFileContents({
-    owner,
-    repo,
-    path,
-    message: `chore(roboshosso): ${sha ? 'actualizar' : 'instalar'} ${path}`,
-    content: b64(content),
-    ...(sha ? { sha } : {}),
-  });
+  try {
+    await octokit.repos.createOrUpdateFileContents({
+      owner,
+      repo,
+      path,
+      message: `chore(roboshosso): ${sha ? 'actualizar' : 'instalar'} ${path}`,
+      content: b64(content),
+      ...(sha ? { sha } : {}),
+    });
+  } catch (e) {
+    // La rama está protegida por el portón: el commit directo se rechaza.
+    if ([403, 409, 422].includes(e.status)) return 'protegido (actualiza vía PR)';
+    throw e;
+  }
   return sha ? 'actualizado' : 'creado';
 }
 
@@ -91,6 +102,27 @@ async function ensureSecret(owner, repo) {
   return 'secreto-puesto';
 }
 
+async function ensureGate(owner, repo, branch) {
+  if (!GATE) return 'desactivado';
+  if (DRY_RUN) return 'protegería';
+  try {
+    await octokit.repos.updateBranchProtection({
+      owner,
+      repo,
+      branch,
+      required_status_checks: { strict: false, contexts: REQUIRED_CHECKS },
+      enforce_admins: true, // portón total: sin excepciones, ni para el dueño
+      required_pull_request_reviews: { required_approving_review_count: 0 },
+      restrictions: null,
+    });
+    return 'portón activo';
+  } catch (e) {
+    // Repos privados en plan gratuito no permiten branch protection, etc.
+    const msg = (e.message || '').split('\n')[0];
+    return `sin portón (${e.status || '?'}: ${msg})`;
+  }
+}
+
 const { data: me } = await octokit.users.getAuthenticated();
 console.log(`RoboShosso propagando como @${me.login}${DRY_RUN ? ' · DRY RUN' : ''}`);
 
@@ -112,10 +144,12 @@ for (const r of repos) {
     const results = [];
     for (const p of FILES) results.push(`${p}: ${await ensureFile(owner, repo, p, localContent[p])}`);
     const secretResult = await ensureSecret(owner, repo);
+    const gateResult = await ensureGate(owner, repo, r.default_branch);
     if (results.some((x) => CHANGED.test(x)) || CHANGED.test(secretResult)) touched++;
     console.log(`• ${r.full_name}`);
     for (const line of results) console.log(`   ${line}`);
     console.log(`   secreto ${SECRET_NAME}: ${secretResult}`);
+    console.log(`   portón (${r.default_branch}): ${gateResult}`);
   } catch (e) {
     console.error(`✗ ${r.full_name}: ${e.status || ''} ${e.message}`);
   }
