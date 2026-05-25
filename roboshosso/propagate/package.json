@@ -1,0 +1,10 @@
+{
+  "name": "roboshosso-propagate",
+  "private": true,
+  "type": "module",
+  "description": "Propagador de RoboShosso: instala el bot en todos los repos de la cuenta.",
+  "dependencies": {
+    "@octokit/rest": "^21.1.1",
+    "libsodium-wrappers": "^0.7.15"
+  }
+}

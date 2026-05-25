@@ -5,8 +5,6 @@ out/
 *.log
 .env
 .env.local
-<<<<<<< HEAD
-=======
 .vscode/
 .idea/
->>>>>>> 800198c (feat: scaffolds Shosso IDE en Electron)
+roboshosso-sim.md

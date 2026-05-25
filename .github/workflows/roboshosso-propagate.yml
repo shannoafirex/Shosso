@@ -1,0 +1,43 @@
+name: RoboShosso · Propagar
+
+# Repo de control: instala/actualiza RoboShosso en TODOS los repos de la cuenta
+# (incluidos los nuevos) en cada ejecución programada.
+on:
+  schedule:
+    - cron: '*/30 * * * *' # cada 30 minutos
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Simular sin escribir nada'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: roboshosso-propagate
+  cancel-in-progress: false
+
+jobs:
+  propagate:
+    name: Propagar a todos los repos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Instalar dependencias del propagador
+        run: npm install
+        working-directory: roboshosso/propagate
+
+      - name: Propagar RoboShosso
+        run: node roboshosso/propagate/propagate.mjs
+        env:
+          ROBOSHOSSO_TOKEN: ${{ secrets.ROBOSHOSSO_TOKEN }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ROBOSHOSSO_SKIP: ${{ vars.ROBOSHOSSO_SKIP }}
+          DRY_RUN: ${{ inputs.dry_run }}
