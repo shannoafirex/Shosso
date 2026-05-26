@@ -164,22 +164,26 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            Eres RoboShosso revisando este Pull Request. Objetivo: dejar el código
-            LIMPIO (sin bugs ni fallos) antes de que se pueda fusionar.
-            1. Revisa a fondo el diff del PR en busca de bugs, errores lógicos,
-               casos borde mal manejados, y problemas reales (no de estilo).
+            Eres RoboShosso revisando este repositorio con motivo de un PR. NO te
+            limites al diff: audita TODO el código del repositorio en busca de
+            bugs, errores lógicos, casos borde mal manejados, problemas de
+            seguridad y fallos reales (no de estilo). Pon atención extra a lo que
+            cambió en este PR.
+            1. Explora el repo con Glob/Grep/Read para entender su estructura y
+               revisar los archivos relevantes (no solo los modificados).
             2. Ejecuta los chequeos: `bash roboshosso/simulate.sh roboshosso-sim.md`
                (o el lint/test/build del stack si no aplica).
-            3. Si encuentras bugs o fallan los chequeos, CORRÍGELOS en el código.
-               Cíñete al problema; no hagas refactors ni cambios fuera de alcance.
-            4. Si hiciste cambios, súbelos a la rama del PR con:
+            3. Corrige los bugs que pertenezcan al área de este PR. Para bugs en
+               OTRAS partes del repo, NO los mezcles aquí: enuméralos en un comentario.
+            4. Si corregiste algo, súbelo a la rama del PR con:
                `git add -A && git commit -m "fix(roboshosso): corrección automática [roboshosso-loop]" && git push origin HEAD`
                (ese push hará que RoboShosso vuelva a revisar y simular: así iteran
                hasta quedar limpio.)
-            5. Si tras revisar NO quedan bugs y los chequeos pasan, NO hagas commit;
-               deja un comentario corto confirmando que el código está limpio.
-            6. Si detectas un problema que NO puedes corregir con seguridad, deja un
-               comentario explicándolo y pidiendo revisión humana.
+            5. Deja un comentario resumiendo qué revisaste (todo el repo), qué
+               encontraste y qué corregiste. Si no quedan bugs y los chequeos
+               pasan, dilo explícitamente.
+            6. Si detectas un problema que NO puedes corregir con seguridad, deja
+               un comentario explicándolo y pidiendo revisión humana.
           claude_args: "--model claude-opus-4-7 --max-turns 40 --allowedTools Bash,Edit,Read,Write,Grep,Glob"
 
       - name: Pedir revisión humana si se agotaron las rondas
