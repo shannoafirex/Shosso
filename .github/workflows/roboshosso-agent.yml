@@ -2,6 +2,9 @@ name: RoboShosso Agent
 
 # Modo agente: al comentar "/roboshosso <instrucción>" en un issue o PR,
 # Claude entra al repositorio, hace los cambios y los empuja a la rama del PR.
+# Revisión completa: "/roboshosso" solo, o seguido de review/revisa/verifica,
+# en un PR lanza roboshosso.yml sobre ese PR (simular, revisar, corregir y
+# hacer merge), igual que al abrirlo.
 on:
   issue_comment:
     types: [created]
@@ -12,12 +15,52 @@ on:
 permissions: {}
 
 jobs:
-  agent:
-    name: Agente RoboShosso
+  route:
+    name: ¿Revisión o agente?
     # Solo personas con acceso al repo pueden dispararlo (el agente escribe).
     if: >-
       contains(github.event.comment.body, '/roboshosso') &&
       contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    runs-on: ubuntu-latest
+    outputs:
+      mode: ${{ steps.mode.outputs.mode }}
+    steps:
+      - id: mode
+        env:
+          BODY: ${{ github.event.comment.body }}
+          IS_PR: ${{ (github.event.issue.pull_request || github.event.pull_request) && 'yes' || 'no' }}
+        run: |
+          # Lo que va detrás del primer "/roboshosso" en su línea.
+          rest=$(printf '%s\n' "$BODY" | tr -d '\r' | grep -i -m1 '/roboshosso' | sed -E 's#^.*/[Rr][Oo][Bb][Oo][Ss][Hh][Oo][Ss][Ss][Oo]##; s/^[[:space:]]+//')
+          mode=agent
+          if [[ "$IS_PR" == yes ]] && { [[ -z "$rest" ]] || printf '%s' "$rest" | grep -qiE '^(review|revis|verific)'; }; then
+            mode=review
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+
+  review:
+    name: Revisión completa pedida por comentario
+    needs: route
+    if: needs.route.outputs.mode == 'review'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      issues: write
+      pull-requests: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.issue.number || github.event.pull_request.number }}
+          REACTIONS: ${{ github.event_name == 'issue_comment' && 'issues' || 'pulls' }}/comments/${{ github.event.comment.id }}/reactions
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/$REACTIONS" -f content=eyes > /dev/null || true
+          gh workflow run roboshosso.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH" -f pr="$PR"
+
+  agent:
+    name: Agente RoboShosso
+    needs: route
+    if: needs.route.outputs.mode == 'agent'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
