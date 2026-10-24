@@ -71,7 +71,8 @@ async function ensureFile(owner, repo, path, content) {
       owner,
       repo,
       path,
-      message: `chore(roboshosso): ${sha ? 'actualizar' : 'instalar'} ${path}`,
+      // [skip ci]: instalar o actualizar el revisor no re-verifica todo el repo.
+      message: `chore(roboshosso): ${sha ? 'actualizar' : 'instalar'} ${path} [skip ci]`,
       content: b64(content),
       ...(sha ? { sha } : {}),
     });
