@@ -19,13 +19,13 @@ run_step() {
   local name="$1"; shift
   echo "::group::${name}"
   if "$@"; then
-    ROWS+="| ${name} | ✅ pasó |"$'\n'
+    ROWS+="| ${name} | ✅ passed |"$'\n'
     echo "→ ${name}: OK"
   else
     local code=$?
-    ROWS+="| ${name} | ❌ falló (exit ${code}) |"$'\n'
+    ROWS+="| ${name} | ❌ failed (exit ${code}) |"$'\n'
     OVERALL=1
-    echo "→ ${name}: FALLÓ (exit ${code})"
+    echo "→ ${name}: FAILED (exit ${code})"
   fi
   echo "::endgroup::"
 }
@@ -81,24 +81,24 @@ fi
 
 # ----------------------------------------------------------------- Resumen
 if [[ -z "${ROWS}" ]]; then
-  STATUS_LINE="ℹ️ No detecté un stack conocido (Node, Python, Go, Rust o Makefile). No se ejecutó ninguna simulación."
+  STATUS_LINE="ℹ️ No known stack detected (Node, Python, Go, Rust or Makefile). No simulation was run."
   TABLE=""
 else
   if [[ "${OVERALL}" -eq 0 ]]; then
-    STATUS_LINE="✅ **Simulación OK** — todos los chequeos pasaron."
+    STATUS_LINE="✅ **Simulation OK** — every check passed."
   else
-    STATUS_LINE="❌ **Simulación con fallos** — revisa la tabla."
+    STATUS_LINE="❌ **Simulation failed** — see the table."
   fi
-  TABLE="| Paso | Resultado |"$'\n'"| --- | --- |"$'\n'"${ROWS}"
+  TABLE="| Step | Result |"$'\n'"| --- | --- |"$'\n'"${ROWS}"
 fi
 
 {
   echo '<img src="https://robohash.org/roboshosso.png?set=set1&size=110x110" align="right" width="96" height="96" alt="RoboShosso" />'
-  echo "## 🤖 RoboShosso · Simulación"
+  echo "## 🤖 RoboShosso · Simulation"
   echo ""
-  echo "**Stack detectado:**"
+  echo "**Detected stack:**"
   echo ""
-  if [[ -n "${DETECTED}" ]]; then echo "${DETECTED}"; else echo "_(ninguno)_"; fi
+  if [[ -n "${DETECTED}" ]]; then echo "${DETECTED}"; else echo "_(none)_"; fi
   echo ""
   echo "${STATUS_LINE}"
   echo ""

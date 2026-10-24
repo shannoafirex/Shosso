@@ -8,6 +8,7 @@
 //   ROBOSHOSSO_TOKEN         PAT con acceso a contents + workflows + secrets de tus repos (obligatorio)
 //   CLAUDE_CODE_OAUTH_TOKEN  token de tu suscripción (claude setup-token); se replica como secreto (opcional)
 //   ROBOSHOSSO_SKIP          lista separada por comas de repos a omitir (opcional)
+//   ROBOSHOSSO_ORGS          lista separada por comas de organizaciones cuyos repos también se cubren (opcional)
 //   DRY_RUN                  'true' para simular sin escribir (opcional)
 
 import { Octokit } from '@octokit/rest';
@@ -28,6 +29,7 @@ const DRY_RUN = process.env.DRY_RUN === 'true';
 const skip = new Set(
   (process.env.ROBOSHOSSO_SKIP || '').split(',').map((s) => s.trim()).filter(Boolean)
 );
+const orgs = (process.env.ROBOSHOSSO_ORGS || '').split(',').map((s) => s.trim()).filter(Boolean);
 
 // Portón obligatorio: protege la rama principal exigiendo PR + el check de
 // simulación de RoboShosso en verde. ROBOSHOSSO_GATE=off lo desactiva.
@@ -44,6 +46,7 @@ const FILES = [
   '.github/workflows/roboshosso.yml',
   '.github/workflows/roboshosso-agent.yml',
   'roboshosso/simulate.sh',
+  'roboshosso/review.sh',
 ];
 const localContent = Object.fromEntries(FILES.map((p) => [p, readFileSync(p, 'utf8')]));
 
@@ -148,6 +151,9 @@ const repos = await octokit.paginate(octokit.repos.listForAuthenticatedUser, {
   affiliation: 'owner',
   per_page: 100,
 });
+for (const org of orgs) {
+  repos.push(...(await octokit.paginate(octokit.repos.listForOrg, { org, type: 'all', per_page: 100 })));
+}
 
 let touched = 0;
 let skipped = 0;
