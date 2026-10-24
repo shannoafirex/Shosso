@@ -145,6 +145,16 @@ jobs:
         id: ok
         run: echo "go=${{ steps.meta.outputs.fork == 'false' && steps.meta.outputs.state == 'OPEN' }}" >> "$GITHUB_OUTPUT"
 
+      # Que siempre se sepa que arrancó: la revisión tarda varios minutos.
+      - name: Avisar que empezó
+        if: steps.ok.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.meta.outputs.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "🤖 **RoboShosso** started reviewing this PR: simulate (install, lint, tests, build), review, fix and merge if everything is clean. It takes a few minutes; the result will be posted here. Follow it live: $RUN_URL"
+
       # al abrirse, reabrirse o pasar de borrador a listo; no en cada push
       - name: Avisar que un fork no se revisa solo
         if: >-
@@ -209,6 +219,16 @@ jobs:
         run: |
           [ -f /tmp/roboshosso/commented ] && exit 0
           gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "🤖 **RoboShosso** couldn't finish reviewing this PR: the workflow itself failed, not necessarily your code. Details: $RUN_URL"
+
+      # Una revisión más nueva (commit nuevo o pedida otra vez) cancela esta.
+      - name: Avisar si la revisión se canceló
+        if: cancelled() && steps.ok.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.meta.outputs.number }}
+        run: |
+          [ -f /tmp/roboshosso/commented ] && exit 0
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "🤖 **RoboShosso** stopped this review because a newer one replaced it (a new commit or a new request). The newer review will post its own result here."
 
   push:
     name: RoboShosso · verificar y corregir push directo
