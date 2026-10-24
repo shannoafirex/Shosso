@@ -1,48 +1,96 @@
 name: RoboShosso
 
-# Se dispara en cada PR y en cada push directo: simula (instala + prueba) y,
-# en los PRs, además revisa el código con Claude.
+# En cada PR: simula (instala + prueba), Claude revisa y corrige en la rama del
+# PR y, si todo queda limpio y la simulación pasa, RoboShosso hace el merge.
+# La revisión del PR va por pull_request_target: el workflow y el revisor son
+# siempre los de la rama base, y el código del PR solo lo ejecuta un usuario
+# sin privilegios que nunca ve el token de GitHub (ver roboshosso/review.sh).
+# En cada push directo a main (o a mano, desde Actions): simula, verifica y
+# corrige. Las ramas de trabajo se revisan al abrir su PR.
+#
+# Los minutos de Actions cuentan: nada se simula ni se revisa dos veces.
+# Claude corre con Claude Code CLI y la suscripción del secreto
+# CLAUDE_CODE_OAUTH_TOKEN (claude-code-action no acepta eventos push).
+# La lógica vive en roboshosso/review.sh.
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: ['**'] # ramas, no tags
+    branches: [main] # las demás ramas se revisan en su PR
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'Número de PR a revisar (vacío: verificar la rama elegida)'
+        required: false
+        default: ''
 
-permissions:
-  contents: write
-  pull-requests: write
-  id-token: write
+# Nada por defecto: cada job pide solo lo que necesita.
+permissions: {}
 
 # Evita runs encimados y carreras entre agentes en la misma rama/PR. Se separan
 # por evento para no cancelar checks obligatorios del PR con un run de push.
 concurrency:
-  group: roboshosso-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: roboshosso-${{ github.event_name }}-${{ github.event.pull_request.number || inputs.pr || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Solo para PRs de forks: los del repo ya los simula el job `pr` (y los push,
+  # el job `push`), así que aquí sería simular dos veces.
   simulate:
-    name: Simular y probar el PR
+    name: Simular y probar
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write # comentar en commits (push directo)
+      pull-requests: write # comentar en el PR
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # simulate.sh corre código de la rama (npm ci/test, pip…): que no
+          # encuentre el GITHUB_TOKEN guardado en .git/config.
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
 
+      # El código de la rama corre como un usuario sin privilegios: no puede
+      # tocar las acciones ni el entorno de los pasos que publican con el token.
       - name: Ejecutar simulación
         id: sim
-        run: bash roboshosso/simulate.sh roboshosso-sim.md
+        run: |
+          set +e
+          sudo useradd -m -s /bin/bash robosim
+          for f in /etc/cron.deny /etc/at.deny; do echo robosim | sudo tee -a "$f" > /dev/null; done
+          sudo cp -a . /tmp/sim && sudo chown -R robosim: /tmp/sim
+          sudo -u robosim -H env "PATH=$PATH" CI=true bash -c 'cd /tmp/sim && bash roboshosso/simulate.sh /tmp/sim/roboshosso-sim.md'
+          code=$?
+          sudo -u robosim kill -9 -1
+          # leído con los permisos de robosim: un symlink suyo no puede llevar a archivos del runner
+          sudo -u robosim cat /tmp/sim/roboshosso-sim.md > roboshosso-sim.md 2> /dev/null || echo "_(the simulation left no summary)_" > roboshosso-sim.md
+          sudo usermod -L -e 1 robosim
+          sudo pkill -9 -u robosim
+          exit $code
         continue-on-error: true
 
       - name: Publicar resultado
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         with:
           script: |
             const fs = require('fs');
             const marker = '<!-- roboshosso-sim -->';
             const body = `${marker}\n${fs.readFileSync('roboshosso-sim.md', 'utf8')}`;
             const { owner, repo } = context.repo;
+            // el resultado siempre queda en el resumen del job
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, body);
+            // un PR de fork recibe un token de solo lectura: ahí no se puede comentar
+            const pr = context.payload.pull_request;
+            if (pr && pr.head.repo?.full_name !== `${owner}/${repo}`) return; // (fork borrado: repo null)
             if (context.eventName === 'pull_request') {
               const issue_number = context.payload.pull_request.number;
               const comments = await github.paginate(
@@ -66,134 +114,182 @@ jobs:
           echo "La simulación reportó fallos en al menos un chequeo."
           exit 1
 
-  review:
-    name: Revisión de código con Claude
-    # Solo en PRs del mismo repo: los forks no exponen el secreto del token.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+  pr:
+    name: RoboShosso · revisar, corregir y hacer merge
+    # PRs que no sean borrador, o uno pedido a mano / por RoboShosso desde Actions.
+    if: >-
+      (github.event_name == 'pull_request_target' && !github.event.pull_request.draft) ||
+      (github.event_name == 'workflow_dispatch' && inputs.pr != '')
     runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      actions: write # lanzar la release tras el merge (el merge con este token no dispara el push)
+      contents: write
+      pull-requests: write
+      statuses: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
-          plugins: "code-review@claude-code-plugins"
-          prompt: "/code-review:code-review"
-          claude_args: "--model claude-opus-4-7"
-
-  autofix:
-    name: Verificar y corregir push directo (Claude)
-    # Solo en pushes directos que NO sean ya una corrección automática.
-    if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      # Si la rama ya tiene un PR abierto, lo revisa el job `iterate`: evitamos
-      # que dos agentes empujen a la misma rama a la vez.
-      - name: ¿La rama tiene un PR abierto?
-        id: pr
-        uses: actions/github-script@v7
-        with:
-          result-encoding: string
-          script: |
-            const branch = context.ref.replace('refs/heads/', '');
-            const { data } = await github.rest.pulls.list({
-              owner: context.repo.owner, repo: context.repo.repo,
-              state: 'open', head: `${context.repo.owner}:${branch}`,
-            });
-            return data.length > 0 ? 'yes' : 'no';
-
-      - if: steps.pr.outputs.result == 'no'
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            Se hizo un push DIRECTO a este repositorio (sin pasar por un PR), así que
-            nadie lo revisó. Verifica y corrige lo necesario:
-            1. Mira qué cambió en el último commit: `git show --stat HEAD` y el diff.
-            2. Ejecuta los chequeos del proyecto: `bash roboshosso/simulate.sh roboshosso-sim.md`
-               (si no hay stack reconocido, corre el lint/test/build que aplique).
-            3. Si hay fallos, errores o bugs introducidos por ese commit, corrígelos
-               en el código. No hagas refactors ni cambios fuera del alcance del problema.
-            4. Si hiciste cambios, súbelos a esta misma rama con:
-               `git add -A && git commit -m "fix(roboshosso): corrección automática [skip ci]" && git push origin HEAD`
-               El `[skip ci]` es OBLIGATORIO para no entrar en bucle.
-            5. Si todo estaba bien, NO hagas ningún commit; solo deja una nota breve.
-          claude_args: "--model claude-opus-4-7 --max-turns 20 --allowedTools Bash,Edit,Read,Write,Grep,Glob"
-
-  iterate:
-    name: RoboShosso · revisar y corregir hasta dejarlo limpio
-    # Solo PRs del mismo repo: no podemos empujar correcciones a un fork.
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.ref }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      # Tope de seguridad: cuenta las rondas de autocorrección SOLO en este PR
-      # (commits entre base y head), para no iterar infinitamente si no converge.
-      - name: Contar rondas previas
-        id: cap
+      - name: Datos del PR
+        id: meta
         env:
-          BASE: ${{ github.event.pull_request.base.ref }}
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number || inputs.pr }}
         run: |
-          git fetch origin "$BASE" --quiet || true
-          ROUNDS=$(git log --format=%s "origin/$BASE..HEAD" 2>/dev/null | grep -c '\[roboshosso-loop\]' || true)
-          echo "rounds=${ROUNDS:-0}" >> "$GITHUB_OUTPUT"
-          echo "Rondas de autocorrección en este PR: ${ROUNDS:-0}"
+          gh pr view "$PR" --repo "$GITHUB_REPOSITORY" \
+            --json number,headRefName,baseRefName,isCrossRepository,state,author \
+            --jq '"number=\(.number)\nhead=\(.headRefName)\nbase=\(.baseRefName)\nfork=\(.isCrossRepository)\nstate=\(.state)\nauthor=\(.author.login)"' >> "$GITHUB_OUTPUT"
+          # OWNER / COLLABORATOR / …: el revisor lo tiene en cuenta
+          echo "assoc=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .author_association)" >> "$GITHUB_OUTPUT"
 
-      - name: Revisar y corregir (Claude)
-        if: fromJSON(steps.cap.outputs.rounds) < 10
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          prompt: |
-            Eres RoboShosso revisando este repositorio con motivo de un PR. NO te
-            limites al diff: audita TODO el código del repositorio en busca de
-            bugs, errores lógicos, casos borde mal manejados, problemas de
-            seguridad y fallos reales (no de estilo). Pon atención extra a lo que
-            cambió en este PR.
-            1. Explora el repo con Glob/Grep/Read para entender su estructura y
-               revisar los archivos relevantes (no solo los modificados).
-            2. Ejecuta los chequeos: `bash roboshosso/simulate.sh roboshosso-sim.md`
-               (o el lint/test/build del stack si no aplica).
-            3. Corrige los bugs que pertenezcan al área de este PR. Para bugs en
-               OTRAS partes del repo, NO los mezcles aquí: enuméralos en un comentario.
-            4. Si corregiste algo, súbelo a la rama del PR con:
-               `git add -A && git commit -m "fix(roboshosso): corrección automática [roboshosso-loop]" && git push origin HEAD`
-               (ese push hará que RoboShosso vuelva a revisar y simular: así iteran
-               hasta quedar limpio.)
-            5. Deja un comentario resumiendo qué revisaste (todo el repo), qué
-               encontraste y qué corregiste. Si no quedan bugs y los chequeos
-               pasan, dilo explícitamente.
-            6. Si detectas un problema que NO puedes corregir con seguridad, deja
-               un comentario explicándolo y pidiendo revisión humana.
-          claude_args: "--model claude-opus-4-7 --max-turns 40 --allowedTools Bash,Edit,Read,Write,Grep,Glob"
+      # Los forks no tienen el secreto ni podemos empujarles.
+      - name: ¿Se puede revisar?
+        id: ok
+        run: echo "go=${{ steps.meta.outputs.fork == 'false' && steps.meta.outputs.state == 'OPEN' }}" >> "$GITHUB_OUTPUT"
 
-      - name: Pedir revisión humana si se agotaron las rondas
-        if: fromJSON(steps.cap.outputs.rounds) >= 10
-        uses: actions/github-script@v7
+      # al abrirse, reabrirse o pasar de borrador a listo; no en cada push
+      - name: Avisar que un fork no se revisa solo
+        if: >-
+          steps.meta.outputs.fork == 'true' && steps.meta.outputs.state == 'OPEN' &&
+          (github.event.action == 'opened' || github.event.action == 'reopened' || github.event.action == 'ready_for_review')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.meta.outputs.number }}
+          AUTHOR: ${{ steps.meta.outputs.author }}
+        run: |
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "🤖 **RoboShosso** · @$AUTHOR thanks for the PR. I don't review PRs from forks automatically (they can't reach my credentials), so a person will review it. The simulation (install + build + test) still runs; its result is in this PR's checks."
+
+      # El código del PR (lo que se revisa)…
+      - if: steps.ok.outputs.go == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          script: |
-            const { owner, repo } = context.repo;
-            const issue_number = context.payload.pull_request.number;
-            await github.rest.issues.createComment({
-              owner, repo, issue_number,
-              body: '🤖 RoboShosso llegó al tope de 10 rondas de autocorrección sin dejar el código limpio. Requiere **revisión humana**: probablemente hay algo que no se puede resolver automáticamente o que oscila entre cambios.'
-            });
+          path: repo
+          fetch-depth: 0
+          ref: ${{ steps.meta.outputs.head }}
+          persist-credentials: false
+
+      # …y el revisor, siempre el de la rama base: un PR no puede cambiar a
+      # quien lo juzga.
+      - if: steps.ok.outputs.go == 'true'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: base
+          ref: ${{ steps.meta.outputs.base }}
+          persist-credentials: false
+
+      - if: steps.ok.outputs.go == 'true'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Instalar Claude Code
+        if: steps.ok.outputs.go == 'true'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Revisar, corregir y hacer merge
+        if: steps.ok.outputs.go == 'true'
+        working-directory: repo
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ steps.meta.outputs.head }}
+          BASE_REF: ${{ steps.meta.outputs.base }}
+          PR_NUMBER: ${{ steps.meta.outputs.number }}
+          PR_AUTHOR: ${{ steps.meta.outputs.author }}
+          PR_ASSOC: ${{ steps.meta.outputs.assoc }}
+          REPO_PRIVATE: ${{ github.event.repository.private }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: bash ../base/roboshosso/review.sh pr
+
+      # Siempre queda un comentario: si el flujo se rompió antes de dejar el suyo, lo dice.
+      - name: Avisar si RoboShosso no pudo terminar
+        if: failure() && steps.meta.outputs.number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.meta.outputs.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -f /tmp/roboshosso/commented ] && exit 0
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "🤖 **RoboShosso** couldn't finish reviewing this PR: the workflow itself failed, not necessarily your code. Details: $RUN_URL"
+
+  push:
+    name: RoboShosso · verificar y corregir push directo
+    # No re-verifica sus propias correcciones.
+    if: >-
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.pr == '')) &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      actions: write # mandar a revisar el PR de correcciones
+      contents: write
+      pull-requests: write
+      statuses: write
+    steps:
+      # El código del push (lo que se revisa)…
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: repo
+          fetch-depth: 0
+          persist-credentials: false
+
+      # …y el revisor, el de la rama por defecto.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: base
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      # Lo que RoboShosso ya revisa o revisó no se repite: una rama con PR
+      # abierto la revisa el job `pr`, y el merge de un PR que RoboShosso dio
+      # por bueno ya está revisado.
+      - name: ¿Ya lo revisa RoboShosso?
+        id: pr
+        working-directory: repo
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          skip=false
+          n=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" --state open --json number --jq length || echo 0)
+          [ "${n:-0}" = 0 ] || skip=true
+          if second=$(git rev-parse -q --verify 'HEAD^2'); then
+            st=$(gh api "repos/$GITHUB_REPOSITORY/commits/$second/status" \
+                   --jq '[.statuses[] | select(.context == "RoboShosso")][0].state' || true)
+            [ "$st" != success ] || skip=true
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
+
+      - name: Instalar Claude Code
+        if: steps.pr.outputs.skip == 'false'
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Verificar y corregir
+        if: steps.pr.outputs.skip == 'false'
+        working-directory: repo
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+          BEFORE: ${{ github.event.before }}
+          PUSH_AUTHOR: ${{ github.event.head_commit.author.username }}
+          REPO_PRIVATE: ${{ github.event.repository.private }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          REVIEWER=../base/roboshosso/review.sh
+          # solo al instalar RoboShosso, cuando la rama por defecto aún no lo tiene
+          [ -f "$REVIEWER" ] || REVIEWER=roboshosso/review.sh
+          bash "$REVIEWER" push
+
+      # Siempre queda un comentario: si el flujo se rompió antes de dejar el suyo, lo dice.
+      - name: Avisar si RoboShosso no pudo terminar
+        # (sin el dato también: es justo cuando el flujo se rompió antes)
+        if: failure() && steps.pr.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -f /tmp/roboshosso/commented ] && exit 0
+          gh api -X POST "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA/comments" \
+            -f body="🤖 **RoboShosso** · @$GITHUB_ACTOR I couldn't finish checking this push: the workflow itself failed, not necessarily your code. Details: $RUN_URL" > /dev/null
