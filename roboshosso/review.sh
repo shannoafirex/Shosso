@@ -305,9 +305,12 @@ elif [[ "$MODE" == pr ]]; then
       # A merge made with the Actions token fires no push event, so release.yml
       # never ran after RoboShosso's merges and the app stayed on the old
       # version.  Start the release here instead, skipping the docs/CI-only
-      # changes that release.yml's paths-ignore skips on a push.
+      # changes that release.yml's paths-ignore skips on a push.  Only in repos
+      # that have a release.yml, and not when the merge token merged (its merge
+      # does fire the push, which already starts the release).
       SHIPS=$(git_ diff --name-only "origin/$BASE_REF...$HEAD_SHA" | grep -vE '(\.md$|^docs/|^\.github/|^roboshosso/)' | head -1)
-      if [[ "$BASE_REF" == "$DEFAULT_BRANCH" && -n "$SHIPS" ]]; then
+      if [[ "$BASE_REF" == "$DEFAULT_BRANCH" && -n "$SHIPS" && -z "$MERGE_AUTH" ]] &&
+         gh_ api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml" > /dev/null 2>&1; then
         if gh_ workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$DEFAULT_BRANCH" -f publish=true > "$OUT/release.log" 2>&1; then
           STATUS="$STATUS A new release with this change is being built; installed apps will update on their own."
         else
