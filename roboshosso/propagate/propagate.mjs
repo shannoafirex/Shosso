@@ -7,6 +7,7 @@
 // ahí). Variables de entorno:
 //   ROBOSHOSSO_TOKEN         PAT con acceso a contents + workflows + secrets de tus repos (obligatorio)
 //   CLAUDE_CODE_OAUTH_TOKEN  token de tu suscripción (claude setup-token); se replica como secreto (opcional)
+//   ROBOSHOSSO_MERGE_TOKEN   token para fusionar PRs que cambian workflows; se replica como secreto (opcional)
 //   ROBOSHOSSO_SKIP          lista separada por comas de repos a omitir (opcional)
 //   ROBOSHOSSO_ORGS          lista separada por comas de organizaciones cuyos repos también se cubren (opcional)
 //   DRY_RUN                  'true' para simular sin escribir (opcional)
@@ -84,23 +85,28 @@ async function ensureFile(owner, repo, path, content) {
   return sha ? 'actualizado' : 'creado';
 }
 
-const SECRET_NAME = 'CLAUDE_CODE_OAUTH_TOKEN';
+// ROBOSHOSSO_MERGE_TOKEN (opcional): con él RoboShosso fusiona PRs que cambian
+// workflows, cosa que el token de Actions no puede hacer.
+const SECRETS = [
+  ['CLAUDE_CODE_OAUTH_TOKEN', oauthToken],
+  ['ROBOSHOSSO_MERGE_TOKEN', process.env.ROBOSHOSSO_MERGE_TOKEN || ''],
+];
 
-async function ensureSecret(owner, repo) {
-  if (!oauthToken) return 'sin-token';
+async function ensureSecret(owner, repo, name, value) {
+  if (!value) return 'sin-token';
   // Siempre lo (re)escribimos: no podemos leer el valor actual, así que esta es
   // la única forma de propagar una rotación del token a toda la flota.
   if (DRY_RUN) return 'pondría-secreto';
   const { data: pk } = await octokit.actions.getRepoPublicKey({ owner, repo });
   await sodium.ready;
   const enc = sodium.crypto_box_seal(
-    sodium.from_string(oauthToken),
+    sodium.from_string(value),
     sodium.from_base64(pk.key, sodium.base64_variants.ORIGINAL)
   );
   await octokit.actions.createOrUpdateRepoSecret({
     owner,
     repo,
-    secret_name: SECRET_NAME,
+    secret_name: name,
     encrypted_value: sodium.to_base64(enc, sodium.base64_variants.ORIGINAL),
     key_id: pk.key_id,
   });
@@ -168,12 +174,12 @@ for (const r of repos) {
   try {
     const results = [];
     for (const p of FILES) results.push(`${p}: ${await ensureFile(owner, repo, p, localContent[p])}`);
-    const secretResult = await ensureSecret(owner, repo);
+    const secretResults = [];
+    for (const [name, value] of SECRETS) secretResults.push(`secreto ${name}: ${await ensureSecret(owner, repo, name, value)}`);
     const gateResult = await ensureGate(owner, repo, r.default_branch);
-    if (results.some((x) => CHANGED.test(x)) || CHANGED.test(secretResult)) touched++;
+    if (results.some((x) => CHANGED.test(x)) || secretResults.some((x) => CHANGED.test(x))) touched++;
     console.log(`• ${r.full_name}`);
-    for (const line of results) console.log(`   ${line}`);
-    console.log(`   secreto ${SECRET_NAME}: ${secretResult}`);
+    for (const line of [...results, ...secretResults]) console.log(`   ${line}`);
     console.log(`   portón (${r.default_branch}): ${gateResult}`);
   } catch (e) {
     console.error(`✗ ${r.full_name}: ${e.status || ''} ${e.message}`);

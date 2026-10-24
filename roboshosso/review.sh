@@ -5,8 +5,10 @@
 #
 #   review.sh pr    → revisa el PR, corrige en su rama, comenta y, si todo
 #                     queda limpio y la simulación pasa, hace el merge. Si el PR
-#                     toca el propio revisor (.github/ o roboshosso/) nunca hace
-#                     el merge solo: eso lo decide una persona.
+#                     toca el propio revisor (sus workflows roboshosso*.yml o
+#                     roboshosso/) nunca hace el merge solo: eso lo decide una
+#                     persona. Otros workflows (ci.yml…) se revisan y fusionan
+#                     como cualquier cambio.
 #   review.sh push  → verifica un push directo. En una rama cualquiera sube las
 #                     correcciones a esa misma rama; en la rama por defecto las
 #                     sube a una rama nueva, abre un PR y lo manda a revisar.
@@ -21,7 +23,9 @@
 # Al terminar menciona a quien hizo el PR (PR_AUTHOR) o el push (GITHUB_ACTOR)
 # para que GitHub le avise del resultado.
 #
-# Entorno: CLAUDE_CODE_OAUTH_TOKEN, GH_TOKEN, GITHUB_REPOSITORY, BRANCH,
+# Entorno: CLAUDE_CODE_OAUTH_TOKEN, GH_TOKEN, ROBOSHOSSO_MERGE_TOKEN (opcional,
+# solo para el merge: el token de Actions no puede fusionar PRs que cambian
+# workflows), GITHUB_REPOSITORY, BRANCH,
 # DEFAULT_BRANCH, REPO_PRIVATE; en pr además BASE_REF, PR_NUMBER, PR_AUTHOR y
 # PR_ASSOC (su rol en el repo); en push, BEFORE (el commit anterior al push,
 # opcional) y PUSH_AUTHOR (autor del último commit).
@@ -44,7 +48,8 @@ SIM_USER=robosim
 
 CLAUDE_TOKEN="${CLAUDE_CODE_OAUTH_TOKEN:-}"
 GH_AUTH="${GH_TOKEN:-}"
-unset CLAUDE_CODE_OAUTH_TOKEN GH_TOKEN
+MERGE_AUTH="${ROBOSHOSSO_MERGE_TOKEN:-}"
+unset CLAUDE_CODE_OAUTH_TOKEN GH_TOKEN ROBOSHOSSO_MERGE_TOKEN
 gh_() { GH_TOKEN="$GH_AUTH" gh "$@"; }
 git_() { git -C "$REPO" -c core.hooksPath=/dev/null -c credential.helper= "$@"; }
 # el token va en el entorno de git, no en la línea de comandos (que cualquier usuario puede leer)
@@ -266,7 +271,7 @@ STATUS=""
 try_merge() {
   local i
   for i in 1 2 3 4 5 6; do
-    gh_ pr merge "$PR_NUMBER" --merge --match-head-commit "$HEAD_SHA" > "$OUT/merge.log" 2>&1 && return 0
+    GH_TOKEN="${MERGE_AUTH:-$GH_AUTH}" gh pr merge "$PR_NUMBER" --merge --match-head-commit "$HEAD_SHA" > "$OUT/merge.log" 2>&1 && return 0
     # a real conflict or a branch rule won't clear by waiting
     grep -qiE 'cannot be cleanly created|policy prohibits' "$OUT/merge.log" && return 1
     grep -qiE 'not mergeable|mergeability' "$OUT/merge.log" || return 1
@@ -282,7 +287,7 @@ elif [[ "$MODE" == pr ]]; then
     if push_to "$BRANCH"; then DELIVERED=yes; else STATUS="⚠️ I couldn't push my fixes to \`$BRANCH\`. Not merged."; fi
   fi
   # lo que cambia el PR, contando mis correcciones
-  TOUCHES=$(git_ diff --name-only "origin/$BASE_REF...$HEAD_SHA" | grep -E '^(\.github/|roboshosso/)' | head -5)
+  TOUCHES=$(git_ diff --name-only "origin/$BASE_REF...$HEAD_SHA" | grep -E '^(\.github/workflows/roboshosso[^/]*\.ya?ml|roboshosso/)' | head -5)
   if [[ -z "$STATUS" ]]; then
     if [[ "$VERDICT" == ERROR ]]; then
       STATUS="⚠️ I couldn't complete the review (Claude failed). Not merged."

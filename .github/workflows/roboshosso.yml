@@ -200,6 +200,8 @@ jobs:
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GH_TOKEN: ${{ github.token }}
+          # Solo para el merge: el token de Actions no puede fusionar PRs que cambian workflows.
+          ROBOSHOSSO_MERGE_TOKEN: ${{ secrets.ROBOSHOSSO_MERGE_TOKEN }}
           BRANCH: ${{ steps.meta.outputs.head }}
           BASE_REF: ${{ steps.meta.outputs.base }}
           PR_NUMBER: ${{ steps.meta.outputs.number }}
